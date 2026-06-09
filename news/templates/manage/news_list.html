@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}新闻管理 · 管理中心{% endblock %}
+
+{% block body_class %}adm-body{% endblock %}
+
+{% block layout %}
+<div class="adm">
+{% include "manage/_sidebar.html" with active="news" %}
+
+<main class="adm-main">
+    <div class="adm-top">
+        <div>
+            <div class="crumb">管理中心 / <b>新闻管理</b></div>
+            <h1>新闻管理 <span class="count">/ {{ total_count|default:news_list|length }} 篇{% if today_new %} · 今日 +{{ today_new }}{% endif %}</span></h1>
+        </div>
+        <div class="adm-top-actions">
+            <a class="adm-btn" href="/manage/">仪表盘</a>
+            <a class="adm-btn primary" href="/manage/news/create/">+ 新建新闻</a>
+        </div>
+    </div>
+
+    <div class="adm-table">
+        <form method="get" class="adm-toolbar">
+            <label class="adm-search">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="搜索标题、内容、作者...">
+            </label>
+            <a class="adm-chip is-on" href="?">全部<span class="n">{{ total_count|default:0 }}</span></a>
+            <a class="adm-chip {% if request.GET.featured == '1' %}is-on{% endif %}" href="?featured=1">头条<span class="n">{{ count_featured|default:0 }}</span></a>
+            <span style="margin-left:auto;display:flex;gap:6px;">
+                <span class="adm-chip">分类: {{ request.GET.cat|default:"全部" }} ▾</span>
+                <span class="adm-chip">排序: {{ request.GET.sort|default:"最新" }} ▾</span>
+            </span>
+        </form>
+
+        <div class="adm-thead adm-news-cols">
+            <span><input type="checkbox"></span>
+            <span>封面</span>
+            <span>标题</span>
+            <span>分类</span>
+            <span>状态</span>
+            <span>AI 置信</span>
+            <span>发布时间</span>
+            <span>操作</span>
+        </div>
+
+        {% for news in news_list %}
+        <div class="adm-trow adm-news-cols">
+            <span><input type="checkbox" name="ids" value="{{ news.id }}"></span>
+            {% if news.image_url %}
+            <img class="ph" src="/img/?url={{ news.image_url|urlencode }}" alt="" style="aspect-ratio:4/3;width:60px;object-fit:cover;">
+            {% else %}
+            <div class="ph is-photo-blue"></div>
+            {% endif %}
+            <div class="ttl">
+                <a href="/manage/news/{{ news.id }}/edit/" style="color:inherit;">{{ news.title }}</a>
+                <small>{{ news.author|default:"" }} · #{{ news.id }}</small>
+            </div>
+            {% if news.category %}<span class="cat-chip {{ news.category.slug|default:'tech' }}">{{ news.category.name }}</span>{% else %}<span>—</span>{% endif %}
+            <span class="status pub">已发布</span>
+            <span class="ai-conf">{{ news.ai_confidence|default:"--" }}%</span>
+            <span class="meta">{{ news.publish_time|default:news.created_at|date:"Y-m-d H:i" }}</span>
+            <div class="actions">
+                <a href="/manage/news/{{ news.id }}/edit/" title="编辑">✎</a>
+                <a href="/detail/{{ news.id }}/" target="_blank" title="预览">↗</a>
+                <form method="post" action="/manage/news/{{ news.id }}/delete/" style="display:inline;" onsubmit="return confirm('确认删除?')">
+                    {% csrf_token %}
+                    <button type="submit" title="删除" style="background:none;border:none;color:inherit;cursor:pointer;font-size:inherit;padding:0;">×</button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state" style="margin:0;border:none;">
+            <div class="icon">⊞</div>
+            <h4>暂无新闻</h4>
+            <p>点击「+ 新建新闻」开始添加内容。</p>
+        </div>
+        {% endfor %}
+
+        <div class="adm-table-foot">
+            <span class="info">显示 {{ page_obj.start_index|default:0 }}-{{ page_obj.end_index|default:0 }} / 共 {{ total_count|default:0 }} 篇 · 已选 <span id="adm-sel-count">0</span> 项</span>
+            {% if is_paginated %}
+            <div class="pag">
+                {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">← 上一页</a>{% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}<span class="is-on">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}<a href="?page={{ num }}">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">下一页 →</a>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</main>
+</div>
+{% endblock %}

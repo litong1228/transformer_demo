@@ -1,0 +1,14 @@
+torch
+transformers
+scikit-learn
+pandas
+numpy
+matplotlib
+seaborn
+streamlit
+fastapi
+uvicorn
+pydantic
+jieba
+datasets
+huggingface_hub

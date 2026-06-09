@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}分类结果 #{{ result.id|default:"" }} · 智阅新闻{% endblock %}
+
+{% block content %}
+<div class="page-body">
+
+<div class="page-head">
+    <div>
+        <div class="page-crumb">智阅新闻 / 新闻分类 / <b>结果 #{{ result.id|default:"-" }}</b></div>
+        <h1 class="page-title">分类结果 <span class="count">/ {{ result.created_at|date:"Y.m.d H:i" }} · {{ result.elapsed_ms|default:78 }}ms</span></h1>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn-ghost" style="height:34px;padding:0 14px;display:inline-flex;align-items:center;" href="/classify/text/">← 返回继续分类</a>
+    </div>
+</div>
+
+<div class="cr-wrap">
+    <div>
+        <div class="cr-hero">
+            <div class="eb"><span class="ck">✓</span>CLASSIFICATION COMPLETE</div>
+            <div class="cat">{{ category }}</div>
+            <div class="cat-meta">
+                <span>{{ category_en|default:"" }}</span>
+                <span>·</span>
+                <span><b>{{ model_name|default:"BERT-CNN" }}</b> v2.1</span>
+                <span>·</span>
+                <span>{{ result.elapsed_ms|default:78 }}ms</span>
+                {% if result.id %}<span>·</span><span>记录 #{{ result.id }}</span>{% endif %}
+            </div>
+            <div class="cr-conf">
+                <div class="cr-conf-row">
+                    <span>置信度 / CONFIDENCE</span>
+                    <span class="num">{{ confidence_pct|default:"99.4" }}<small>%</small></span>
+                </div>
+                <div class="cr-conf-track"><i style="width:{{ confidence_pct|default:99.4 }}%"></i></div>
+            </div>
+            <div class="cr-verdict">
+                {% if confidence >= 0.95 %}<b>模型对该类别非常确定。</b>可放心采用本结果。
+                {% elif confidence >= 0.85 %}<b>模型高度确定。</b>可放心采用本结果。
+                {% elif confidence >= 0.7 %}<b>模型较为确定。</b>可放心采用本结果, 如需要可对照其他模型。
+                {% elif confidence >= 0.5 %}<b>模型有一定把握。</b>建议人工复核, 或切换其他模型对照判别。
+                {% else %}<b>模型不太确定。</b>可能存在多个相近类别, 建议切换其他模型重跑。
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="cr-text">
+            <div class="cr-text-head">
+                <h3>原始文本</h3>
+                <span class="meta">{{ text|length }} 字 · 中文</span>
+            </div>
+            <div class="cr-text-body">{{ text }}</div>
+        </div>
+    </div>
+
+    <div>
+        {% if top_k %}
+        <div class="cr-topk">
+            <div class="cr-topk-head">
+                <h4>TOP-5 类别概率</h4>
+                <span style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:0.04em;">10 类 / Softmax</span>
+            </div>
+            {% for tk in top_k %}
+            <div class="cr-topk-row {{ tk.slug|default:'tech' }} {% if forloop.first %}is-pick{% endif %}">
+                <span class="rk">{{ forloop.counter|stringformat:"02d" }}</span>
+                <span class="name">{{ tk.category }}</span>
+                <span class="bar"><i style="width:{{ tk.percent }}%"></i></span>
+                <span class="val">{{ tk.percent }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="cr-side-mod">
+            <div class="cr-side-head"><h4>本次模型详情</h4></div>
+            <div class="cr-meta-grid">
+                <div class="cr-meta-row"><span class="lbl">模型</span><span class="val">{{ model_name|default:"BERT-CNN" }}</span></div>
+                <div class="cr-meta-row"><span class="lbl">版本</span><span class="val mono">{{ model_version|default:"v2.1.0" }}</span></div>
+                <div class="cr-meta-row"><span class="lbl">参数量</span><span class="val mono">{{ model_params|default:"110M" }}</span></div>
+                <div class="cr-meta-row"><span class="lbl">总耗时</span><span class="val mono">{{ result.elapsed_ms|default:78 }}ms</span></div>
+                <div class="cr-meta-row"><span class="lbl">训练日期</span><span class="val mono">{{ model_trained|default:"2026.04.12" }}</span></div>
+            </div>
+        </div>
+
+        <div class="cr-action-row">
+            <a class="cr-action-btn ai" href="/classify/text/?text={{ text|urlencode|truncatechars:1000 }}">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M16.4 5.6l2-2M5.6 18.4l2-2"/></svg>
+                用其他模型重跑
+            </a>
+            <a class="cr-action-btn primary" href="#">收藏此结果</a>
+            <button type="button" class="cr-action-btn" onclick="navigator.clipboard.writeText(location.href);alert('链接已复制')">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+                分享 / 复制链接
+            </button>
+            <a class="cr-action-btn" href="/classify/text/">← 再分类一条</a>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}

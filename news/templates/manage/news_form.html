@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}{% if news.pk %}编辑新闻{% else %}新建新闻{% endif %} · 管理中心{% endblock %}
+
+{% block body_class %}adm-body{% endblock %}
+
+{% block layout %}
+<div class="adm">
+{% include "manage/_sidebar.html" with active="news" %}
+
+<main class="adm-main" style="padding:0;">
+<div style="padding:24px 28px 20px;">
+    <div class="adm-top" style="padding-bottom:0;border-bottom:none;margin-bottom:0;">
+        <div>
+            <div class="crumb">管理中心 / 新闻管理 / <b>{% if news.pk %}编辑 #{{ news.pk }}{% else %}新建{% endif %}</b></div>
+            <h1>{% if news.pk %}编辑新闻{% else %}新建新闻{% endif %}{% if news.pk and news.updated_at %} <span class="count">/ 上次修改 {{ news.updated_at|date:"Y.m.d H:i" }}</span>{% endif %}</h1>
+        </div>
+        <div class="adm-top-actions">
+            {% if news.pk %}<a class="adm-btn" href="/detail/{{ news.pk }}/" target="_blank">预览</a>{% endif %}
+            <a class="adm-btn" href="/manage/news/">← 返回列表</a>
+        </div>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" action="{% if news.pk %}/manage/news/{{ news.pk }}/edit/{% else %}/manage/news/create/{% endif %}">
+{% csrf_token %}
+
+<div style="padding:0 28px 80px;">
+    <div class="adm-form-shell">
+        <div class="adm-form">
+
+            {% if news.image_url %}
+            <div class="adm-hero-image" style="margin-bottom:18px;background:var(--ink);position:relative;overflow:hidden;border:1px solid var(--border-2);">
+                <img src="/img/?url={{ news.image_url|urlencode }}" alt="{{ news.title }}" style="display:block;width:100%;max-height:360px;object-fit:cover;">
+                <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 20px;background:linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0));color:#fff;display:flex;align-items:baseline;justify-content:space-between;gap:16px;">
+                    <div style="font-family:var(--serif);font-weight:700;font-size:16px;line-height:1.3;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ news.title }}</div>
+                    <div style="font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;color:rgba(255,255,255,0.85);">#{{ news.pk }} · 封面图</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="adm-form-section">
+                <div class="adm-form-section-head">
+                    <h3><span class="step">1</span>基础信息</h3>
+                    <span class="desc">STEP 1 OF 3</span>
+                </div>
+
+                <div class="adm-field">
+                    <label>新闻标题 <span class="req">REQUIRED</span> <span class="hint">建议 12–40 字</span></label>
+                    <div class="adm-input">
+                        <input type="text" name="title" required value="{{ news.title|default:'' }}" placeholder="请输入新闻标题">
+                    </div>
+                </div>
+
+                <div class="adm-row-2">
+                    <div class="adm-field">
+                        <label>分类 <span class="req">REQUIRED</span></label>
+                        <select name="category" required style="width:100%;background:var(--paper);border:1px solid var(--border-2);padding:12px 14px;font-family:var(--serif);font-size:15px;color:var(--ink);">
+                            <option value="">-- 选择分类 --</option>
+                            {% for c in categories %}
+                            <option value="{{ c.id }}" {% if news.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="adm-field">
+                        <label>作者 / 来源</label>
+                        <div class="adm-input"><input type="text" name="author" value="{{ news.author|default:'' }}" placeholder="例如: 新华社 · 张文"></div>
+                    </div>
+                </div>
+
+                <div class="adm-field">
+                    <label>摘要 <span class="hint">显示在列表、卡片与搜索结果</span></label>
+                    <div class="adm-input adm-textarea">
+                        <textarea name="summary" rows="3" placeholder="一段简短的内容概述">{{ news.summary|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="adm-form-section">
+                <div class="adm-form-section-head">
+                    <h3><span class="step">2</span>正文内容</h3>
+                    <span class="desc">STEP 2 OF 3</span>
+                </div>
+
+                <div class="adm-field">
+                    <label>正文 <span class="req">REQUIRED</span> <span class="hint">建议 ≥ 200 字</span></label>
+                    <div class="adm-input adm-textarea" style="min-height:280px;">
+                        <textarea name="content" required rows="15" placeholder="完整的新闻内容">{{ news.content|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="adm-field">
+                    <label>封面图 / 配图 URL</label>
+                    <div class="adm-input"><input type="url" name="image_url" id="adm-image-url" value="{{ news.image_url|default:'' }}" placeholder="https://..."></div>
+                    <div id="adm-image-preview" style="margin-top:12px;{% if not news.image_url %}display:none;{% endif %}">
+                        <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;">预览</div>
+                        <div style="position:relative;display:inline-block;max-width:100%;border:1px solid var(--border-2);background:var(--paper-2);">
+                            <img id="adm-image-preview-img" src="{% if news.image_url %}/img/?url={{ news.image_url|urlencode }}{% endif %}" alt="封面预览" style="display:block;max-width:480px;max-height:280px;width:auto;height:auto;object-fit:contain;">
+                            <div id="adm-image-preview-err" style="display:none;padding:24px 32px;font-family:var(--mono);font-size:12px;color:var(--ink-4);">图片加载失败,请检查 URL 是否可访问。</div>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                (function(){
+                    const inp = document.getElementById('adm-image-url');
+                    const wrap = document.getElementById('adm-image-preview');
+                    const img = document.getElementById('adm-image-preview-img');
+                    const err = document.getElementById('adm-image-preview-err');
+                    let t;
+                    function update(){
+                        const v = inp.value.trim();
+                        if (!v) { wrap.style.display = 'none'; return; }
+                        wrap.style.display = '';
+                        err.style.display = 'none';
+                        img.style.display = '';
+                        img.src = '/img/?url=' + encodeURIComponent(v);
+                    }
+                    img.addEventListener('error', () => { img.style.display = 'none'; err.style.display = 'block'; });
+                    img.addEventListener('load', () => { err.style.display = 'none'; });
+                    inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(update, 500); });
+                })();
+                </script>
+            </div>
+
+            <div class="adm-form-section">
+                <div class="adm-form-section-head">
+                    <h3><span class="step">3</span>发布设置</h3>
+                    <span class="desc">STEP 3 OF 3</span>
+                </div>
+                <div class="adm-row-2">
+                    <div class="adm-field">
+                        <label>头条</label>
+                        <label class="adm-switch">
+                            <input type="checkbox" name="is_featured" value="1"{% if news.is_featured %} checked{% endif %}>
+                            <span class="track"><span class="knob"></span></span>
+                            <span class="state-text"></span>
+                        </label>
+                    </div>
+                    <div class="adm-field">
+                        <label>原文链接</label>
+                        <div class="adm-input"><input type="url" name="source" value="{{ news.source|default:'' }}" placeholder="https://..."></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="adm-form-side">
+            <div class="adm-side-ai">
+                <div class="eb">智能辅助</div>
+                <h4>BERT 已对正文完成预分类</h4>
+                <p>切换或修改分类时, 可参考下方 Top-K 候选与置信度。所有结果均会记录到分类日志。</p>
+                {% if news.ai_category %}
+                <div class="res">
+                    <div>
+                        <small style="display:block;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">推荐分类</small>
+                        <b>{{ news.ai_category }}</b>
+                    </div>
+                    <span class="conf">{{ news.ai_confidence }}% · {{ news.ai_elapsed_ms|default:78 }}ms</span>
+                </div>
+                {% endif %}
+                {% if news.ai_top_k %}
+                <div class="topk-mini">
+                    {% for tk in news.ai_top_k %}
+                    <div class="r"><b>{{ tk.category }}</b><span class="bar"><i style="width:{{ tk.percent }}%"></i></span><span class="v">{{ tk.percent }}</span></div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <a href="/classify/text/" target="_blank" style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--ai-glow);letter-spacing:0.04em;">↗ 打开新闻分类</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="adm-save-bar">
+    <span class="info">{% if news.pk %}最后修改 <b>{{ news.updated_at|date:"Y.m.d H:i" }}</b>{% else %}新建新闻{% endif %}</span>
+    <div class="btn-grp">
+        <a href="/manage/news/" style="display:inline-flex;align-items:center;height:36px;padding:0 16px;color:#fff;text-decoration:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);font-size:13px;font-weight:600;">取消</a>
+        <button type="submit" class="primary">{% if news.pk %}保存修改{% else %}创建新闻{% endif %} →</button>
+    </div>
+</div>
+</form>
+</main>
+</div>
+{% endblock %}

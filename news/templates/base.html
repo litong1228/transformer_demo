@@ -1,0 +1,120 @@
+{% load static %}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="same-origin">
+    <title>{% block title %}智阅新闻 · 中文新闻智能分类系统{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=89">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{% block layout %}
+<!-- 主导航 -->
+<header class="site-header">
+    <a href="/" class="site-logo" aria-label="智阅新闻 · 中文新闻文本分类系统">
+        <span class="site-logo-mark">智</span>
+        <span class="site-logo-text">
+            <b>智阅新闻</b>
+            <small>ZHIYUE · BERT</small>
+        </span>
+    </a>
+
+    <form class="site-search" action="/search/" method="get" role="search">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" name="q" placeholder="搜索新闻关键词、话题或类别..." value="{{ request.GET.q|default:'' }}">
+        <kbd>⌘ K</kbd>
+    </form>
+
+    <div class="site-header-actions">
+        <a class="header-pill is-ai" href="/classify/text/" title="单条新闻分类">
+            <span class="dot"></span>新闻分类
+        </a>
+        <a class="header-pill" href="/classify/batch/" title="批量新闻分类" style="background:rgba(255,255,255,0.06);color:#fff;border-color:rgba(255,255,255,0.18);">
+            批量分类
+        </a>
+        {% if user.is_staff %}
+        <a class="header-pill" href="/manage/" title="管理后台" style="background:rgba(255,255,255,0.06);color:#fff;border-color:rgba(255,255,255,0.18);">
+            管理后台
+        </a>
+        {% endif %}
+        <a class="header-icon" href="{% if user.is_authenticated %}/accounts/profile/#bookmarks{% else %}/accounts/login/?next=/accounts/profile/{% endif %}" title="我的收藏" aria-label="我的收藏">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+        </a>
+        {% if user.is_authenticated %}
+        <a class="header-avatar" href="/accounts/profile/" title="{{ user.username }}">
+            {% if user.profile.avatar %}<img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" style="width:100%;height:100%;object-fit:cover;">{% else %}{{ user.username|slice:':1'|upper }}{% endif %}
+        </a>
+        {% else %}
+        <a class="header-pill" href="/accounts/login/" style="background:transparent;color:rgba(255,255,255,0.85);">登录</a>
+        <a class="header-pill" href="/accounts/register/" style="background:#C8201E;color:#fff;border-color:transparent;">注册</a>
+        {% endif %}
+    </div>
+</header>
+
+{% if messages %}
+<div style="max-width:1480px;margin:16px auto 0;padding:0 24px;">
+    {% for message in messages %}
+    <div class="auth-msg" style="margin:0 0 8px;{% if message.tags == 'success' %}background:var(--success-soft,#f0fdf4);border-left-color:var(--c-sports);color:var(--c-sports);{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<main class="page">
+    {% block content %}
+    {% endblock %}
+</main>
+
+<!-- 回到顶部 -->
+<button id="to-top" aria-label="回到顶部" title="回到顶部" style="position:fixed;right:24px;bottom:24px;width:44px;height:44px;background:var(--ink);color:#fff;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(20,14,4,0.18);z-index:90;">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+</button>
+
+<script>
+(function () {
+    const toTop = document.getElementById('to-top');
+    if (toTop) {
+        const onScroll = () => { toTop.style.display = window.scrollY > 320 ? 'flex' : 'none'; };
+        toTop.addEventListener('click', () => window.scrollTo({top: 0, behavior: 'smooth'}));
+        window.addEventListener('scroll', onScroll, {passive: true});
+    }
+
+    // 全局收藏切换:点击带 data-bookmark-id 的链接,POST 到真正的 toggle 端点
+    function getCookie(name) {
+        const m = document.cookie.match('(?:^|;\\s*)' + name + '=([^;]*)');
+        return m ? decodeURIComponent(m[1]) : '';
+    }
+    document.addEventListener('click', function (e) {
+        const a = e.target.closest('[data-bookmark-id]');
+        if (!a) return;
+        e.preventDefault();
+        const id = a.getAttribute('data-bookmark-id');
+        const csrf = getCookie('csrftoken');
+        fetch('/accounts/bookmark/' + id + '/toggle/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function (r) {
+            if (r.status === 403 || r.redirected) {
+                location.href = '/accounts/login/?next=' + encodeURIComponent(location.pathname);
+                return null;
+            }
+            return r.json();
+        }).then(function (data) {
+            if (!data) return;
+            a.classList.toggle('is-on', !!data.bookmarked);
+            a.classList.toggle('bookmarked', !!data.bookmarked);
+            const lbl = a.querySelector('.bm-label');
+            if (lbl) lbl.textContent = data.bookmarked ? '已收藏' : '收藏';
+        }).catch(function () {});
+    });
+})();
+</script>
+{% endblock %}
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

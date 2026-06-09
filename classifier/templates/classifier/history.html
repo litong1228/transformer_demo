@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}分类历史 · 智阅新闻{% endblock %}
+
+{% block content %}
+<div class="page-body">
+
+<div class="page-head">
+    <div>
+        <div class="page-crumb">智阅新闻 / <b>分类历史</b></div>
+        <h1 class="page-title">分类历史 <span class="count">/ {{ total_count|default:0 }} 条记录{% if month_delta %} · 本月 {{ month_delta }}{% endif %}</span></h1>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn-ghost" style="height:34px;padding:0 14px;display:inline-flex;align-items:center;" href="/classify/text/">+ 新分类</a>
+        <a class="btn-ink" style="height:34px;padding:0 14px;display:inline-flex;align-items:center;color:#fff;" href="/classify/batch/">批量分类</a>
+    </div>
+</div>
+
+<div class="up-stats" style="margin-bottom:24px;">
+    <div class="stat-tile">
+        <span class="lbl">总分类次数</span>
+        <b>{{ total_count|default:0 }}</b>
+        <span class="delta">本月 {{ month_delta|default:"+0" }}</span>
+    </div>
+    <div class="stat-tile">
+        <span class="lbl">平均置信度</span>
+        <b>{{ avg_confidence|default:"96.8" }}%</b>
+        <span class="delta">较上月 {{ confidence_delta|default:"+0%" }}</span>
+    </div>
+    <div class="stat-tile is-ai">
+        <span class="lbl">最常用模型</span>
+        <b>{{ most_used_model|default:"BERT-CNN" }}</b>
+        <span class="delta" style="color:var(--ai-glow);">占比 {{ most_used_model_pct|default:64 }}%</span>
+    </div>
+    <div class="stat-tile">
+        <span class="lbl">最常分类</span>
+        <b>{{ most_common_category|default:"科技" }}</b>
+        <span class="delta">{{ most_common_count|default:0 }} 次</span>
+    </div>
+</div>
+
+<div class="up-hist-filter">
+    <span class="label">筛选:</span>
+    <a class="chip {% if not current_cat %}is-on{% endif %}" href="?{% if current_model %}model={{ current_model }}{% endif %}">全部</a>
+    {% for cat in supported_categories %}
+    <a class="chip {% if current_cat == cat %}is-on{% endif %}" href="?category={{ cat }}{% if current_model %}&model={{ current_model }}{% endif %}">{{ cat }}</a>
+    {% endfor %}
+
+    <div id="hm-wrap" style="margin-left:auto;position:relative;">
+        <button type="button" id="hm-btn" class="sel" style="cursor:pointer;border:1px solid var(--border-2);background:var(--surface);font-family:var(--serif);">
+            模型: <b style="margin-left:4px;">{% if current_model %}{{ current_model_name|default:current_model }}{% else %}全部{% endif %}</b>
+            <span style="margin-left:6px;color:var(--ink-4);">▾</span>
+        </button>
+        <div id="hm-pop" hidden style="position:absolute;top:calc(100% + 6px);right:0;z-index:200;min-width:240px;background:var(--paper);border:1px solid var(--ink);box-shadow:0 18px 40px rgba(20,14,4,0.18);padding:8px 0;font-family:var(--sans);">
+            <a href="?{% if current_cat %}category={{ current_cat }}{% endif %}"
+               style="display:flex;align-items:center;justify-content:space-between;padding:9px 16px;text-decoration:none;color:var(--ink);font-family:var(--serif);font-size:13.5px;{% if not current_model %}background:var(--paper-2);font-weight:700;{% endif %}">
+                <span>全部模型</span>
+                {% if not current_model %}<span style="color:var(--red);">✓</span>{% endif %}
+            </a>
+            <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+            {% for m in available_models %}
+            <a href="?model={{ m.id }}{% if current_cat %}&category={{ current_cat }}{% endif %}"
+               style="display:flex;align-items:center;justify-content:space-between;padding:9px 16px;text-decoration:none;color:var(--ink);font-family:var(--serif);font-size:13.5px;{% if current_model == m.id %}background:var(--paper-2);font-weight:700;{% endif %}">
+                <span>{{ m.display_name }}</span>
+                {% if current_model == m.id %}<span style="color:var(--red);">✓</span>{% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const btn = document.getElementById('hm-btn');
+    const pop = document.getElementById('hm-pop');
+    if (!btn || !pop) return;
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        pop.hidden = !pop.hidden;
+    });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#hm-wrap')) pop.hidden = true;
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') pop.hidden = true;
+    });
+})();
+</script>
+
+<div class="up-hist-table">
+    <div class="thead">
+        <span>#</span>
+        <span>分类</span>
+        <span>文本预览</span>
+        <span>模型</span>
+        <span>置信度</span>
+        <span>时间</span>
+    </div>
+    {% for r in history %}
+    <div class="trow {{ r.cat_slug|default:'tech' }}" style="color:inherit;display:grid;">
+        <span class="id">#{{ r.id }}</span>
+        <span class="cat-cell">{{ r.predicted_category }}</span>
+        <span class="txt"><a href="/classify/text/?text={{ r.text|urlencode|truncatechars:1000 }}" style="color:inherit;text-decoration:none;">"{{ r.text|truncatechars:100 }}"</a></span>
+        <span class="model">{{ r.model_display|default:r.model_used }}</span>
+        <span class="conf">
+            <span>{{ r.confidence_pct }}%</span>
+            <span class="mb"><i style="width:{{ r.confidence_pct }}%"></i></span>
+        </span>
+        <span class="time">{{ r.created_at|date:"m-d H:i" }}</span>
+    </div>
+    {% empty %}
+    <div class="empty-state" style="margin:0;border:none;">
+        <div class="icon">○</div>
+        <h4>还没有分类记录</h4>
+        <p>去 <a href="/classify/text/" style="color:var(--red);">新闻分类</a> 提交第一条文本试试。</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div class="pag" style="margin-top:24px;">
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">← 上一页</a>{% endif %}
+    {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}
+        <span class="is-on">{{ num }}</span>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <a href="?page={{ num }}">{{ num }}</a>
+        {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">下一页 →</a>{% endif %}
+</div>
+{% endif %}
+
+</div>
+{% endblock %}

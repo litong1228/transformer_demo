@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}管理中心 · 仪表盘{% endblock %}
+
+{% block body_class %}adm-body{% endblock %}
+
+{% block layout %}
+<div class="adm">
+{% include "manage/_sidebar.html" with active="dashboard" %}
+
+<main class="adm-main">
+    <div class="adm-top">
+        <div>
+            <div class="crumb">管理中心 / <b>仪表盘</b></div>
+            <h1>仪表盘 <span class="count">/ {% now "Y.m.d" %} · 实时</span></h1>
+        </div>
+        <div class="adm-top-actions">
+            <a class="adm-btn" href="/manage/news/">新闻列表</a>
+            <a class="adm-btn primary" href="/manage/news/create/">+ 新建新闻</a>
+        </div>
+    </div>
+
+    <div class="adm-stats">
+        <div class="adm-stat">
+            <span class="lbl">今日访问量</span>
+            <b>{{ stats.today_pv|default:0 }}</b>
+            <div class="met"><span class="up">{{ stats.pv_delta|default:"+0%" }}</span><span>较昨日</span></div>
+        </div>
+        <div class="adm-stat">
+            <span class="lbl">新增注册</span>
+            <b>{{ stats.new_users_month|default:0 }}</b>
+            <div class="met"><span class="up">{{ stats.users_delta|default:"+0%" }}</span><span>本月累计</span></div>
+        </div>
+        <div class="adm-stat ai">
+            <span class="lbl">新闻分类次数</span>
+            <b>{{ stats.classify_today|default:0 }}</b>
+            <div class="met"><span class="up">{{ stats.classify_delta|default:"+0%" }}</span><span>较昨日 · 平均 {{ stats.avg_ms|default:86 }}ms</span></div>
+        </div>
+        <div class="adm-stat red">
+            <span class="lbl">总文章</span>
+            <b>{{ stats.total_news|default:0 }}</b>
+            <div class="met"><span style="color:#fff;">今日 +{{ stats.today_new_news|default:0 }}</span></div>
+        </div>
+    </div>
+
+    <div class="adm-dash-grid">
+        <div class="adm-card">
+            <div class="adm-card-head">
+                <h3>近 7 日访问趋势</h3>
+                <span class="tag">访问量 · 访客数 · 注册</span>
+            </div>
+            <div class="adm-chart">
+                <div class="adm-chart-bars">
+                    {% for d in weekly_pv %}
+                    <span class="b {% if forloop.last %}peak{% elif d.value < 200000 %}md{% else %}{% endif %}" data-v="{{ d.label }}" style="height:{{ d.percent }}%"></span>
+                    {% empty %}
+                    <span class="b lo" data-v="142k" style="height:40%"></span>
+                    <span class="b md" data-v="186k" style="height:55%"></span>
+                    <span class="b md" data-v="218k" style="height:64%"></span>
+                    <span class="b" data-v="246k" style="height:72%"></span>
+                    <span class="b" data-v="232k" style="height:68%"></span>
+                    <span class="b" data-v="258k" style="height:76%"></span>
+                    <span class="b peak" data-v="284k" style="height:92%"></span>
+                    {% endfor %}
+                </div>
+                <div class="adm-chart-axis">
+                    {% for d in weekly_pv %}<span>{{ d.day }}</span>
+                    {% empty %}<span>5/12</span><span>5/13</span><span>5/14</span><span>5/15</span><span>5/16</span><span>5/17</span><span>今日</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="adm-card">
+            <div class="adm-card-head">
+                <h3>最近新闻</h3>
+                <span class="tag"><a href="/manage/news/">查看全部</a></span>
+            </div>
+            <div class="adm-act-list">
+                {% for news in recent_news|slice:":6" %}
+                <div class="adm-act-row add">
+                    <span class="ic">⊞</span>
+                    <span class="body"><b>{{ news.author|default:"系统" }}</b> 发布了 <a href="/detail/{{ news.id }}/" style="color:inherit;text-decoration:underline;">{{ news.title|truncatechars:32 }}</a></span>
+                    <span class="time">{{ news.created_at|timesince }}前</span>
+                </div>
+                {% empty %}
+                <div class="adm-act-row add"><span class="ic">+</span><span class="body"><b>系统</b> 暂无最近活动</span><span class="time">—</span></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="adm-dash-grid" style="margin-top:18px;">
+        <div class="adm-card">
+            <div class="adm-card-head">
+                <h3>各分类发文数 (本月)</h3>
+                <span class="tag">共 {{ month_total_news|default:0 }} 篇</span>
+            </div>
+            <div class="up-breakdown">
+                {% for cat in category_breakdown %}
+                <div class="up-br-row {{ cat.slug }}">
+                    <span class="l">{{ cat.name }}</span>
+                    <span class="bar"><i style="width:{{ cat.percent }}%"></i></span>
+                    <span class="v">{{ cat.count }} · {{ cat.percent }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="adm-card" style="background:var(--ink);color:#fff;border-color:transparent;">
+            <div class="adm-card-head" style="border-bottom-color:rgba(255,255,255,0.15);">
+                <h3 style="color:#fff;">模型性能监控</h3>
+                <span class="tag" style="color:rgba(255,255,255,0.5);">实时</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                {% for m in model_perf %}
+                <div style="display:grid;grid-template-columns:110px 1fr 80px 80px;gap:12px;align-items:center;font-size:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.08);">
+                    <span style="font-family:var(--serif);font-weight:700;font-size:13.5px;color:#fff;display:inline-flex;align-items:center;gap:8px;">
+                        {% if m.ok %}<span style="width:6px;height:6px;border-radius:50%;background:var(--ai-glow);box-shadow:0 0 6px var(--ai-glow);"></span>{% endif %}
+                        {{ m.name }}
+                    </span>
+                    <span style="height:4px;background:rgba(255,255,255,0.1);position:relative;">
+                        <i style="position:absolute;left:0;top:0;bottom:0;width:{{ m.use_pct }}%;background:var(--ai-glow);"></i>
+                    </span>
+                    <span style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.65);text-align:right;">{% if m.latency_ms %}{{ m.latency_ms }}ms{% else %}—{% endif %}</span>
+                    <span style="font-family:var(--mono);font-size:11px;color:var(--ai-glow);text-align:right;font-weight:600;">{{ m.accuracy }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</main>
+</div>
+{% endblock %}

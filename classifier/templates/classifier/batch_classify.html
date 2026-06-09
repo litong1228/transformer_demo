@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}批量分类 · 智阅新闻{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="bcf-body" style="max-width:1360px;margin:0 auto;padding:36px 28px 56px;">
+
+    <div class="page-head" style="padding-bottom:14px;margin-bottom:24px;border-bottom:2px solid var(--ink);display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+        <div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.12em;margin-bottom:8px;">智阅新闻 / 批量分类</div>
+            <h1 style="font-family:var(--serif);font-weight:800;font-size:40px;color:var(--ink);margin:0;letter-spacing:-0.02em;">批量分类</h1>
+            <p style="font-family:var(--sans);font-size:14px;color:var(--ink-3);margin:6px 0 0;">上传 CSV 文件, 一次最多 {{ max_rows|default:"5,000" }} 条文本批量分类。</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <a href="/static/sample/batch_sample.csv" download style="display:inline-flex;align-items:center;padding:9px 16px;background:var(--surface);color:var(--ink);border:1px solid var(--border-2);text-decoration:none;font-family:var(--serif);font-weight:600;font-size:13px;">↓ 下载示例 CSV</a>
+            <a href="/classify/history/" style="display:inline-flex;align-items:center;padding:9px 16px;background:var(--surface);color:var(--ink);border:1px solid var(--border-2);text-decoration:none;font-family:var(--serif);font-weight:600;font-size:13px;">查看分类历史</a>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" action="/classify/batch/" id="bc-form" class="bcf-grid" style="display:grid;grid-template-columns:1.5fr 1fr;gap:24px;align-items:start;">
+        {% csrf_token %}
+
+        {# ========== 左:上传 + 模型 + 操作 ========== #}
+        <section class="ncf-card" style="background:var(--surface);border:1px solid var(--border);">
+            <header class="ncf-card-head" style="display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--border);border-left:3px solid var(--red);">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <h3 style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin:0;">上传文件</h3>
+                <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.06em;">STEP 1 OF 2</span>
+            </header>
+            <div style="padding:22px;">
+
+                <label for="bc-file" id="bc-zone" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:46px 24px;background:var(--paper-2);border:2px dashed var(--border-strong);cursor:pointer;transition:all .15s;text-align:center;">
+                    <div style="width:56px;height:56px;background:var(--surface);border:1px solid var(--border-2);display:inline-flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:900;font-size:24px;color:var(--ink);margin-bottom:14px;">↑</div>
+                    <h4 style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin:0 0 6px;">点击或拖拽文件到此</h4>
+                    <p style="font-family:var(--sans);font-size:13px;color:var(--ink-3);margin:0 0 12px;">支持 CSV 文件, 单次最多 {{ max_rows|default:"5,000" }} 条</p>
+                    <span style="display:inline-flex;align-items:center;padding:9px 18px;background:var(--ink);color:var(--paper);font-family:var(--serif);font-weight:600;font-size:13px;">选择文件</span>
+                    <div style="margin-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:0.04em;">CSV · 自动识别表头与文本列</div>
+                    <input id="bc-file" type="file" name="file" accept=".csv" style="display:none;" required>
+                </label>
+
+                <div id="bc-file-info" style="display:none;margin-top:14px;background:var(--paper-2);border:1px solid var(--border);padding:14px 18px;display:none;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;">
+                    <div style="width:42px;height:42px;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:0.06em;">CSV</div>
+                    <div>
+                        <div style="font-family:var(--serif);font-weight:600;font-size:14px;color:var(--ink);"><span id="bc-fname">filename.csv</span> <small id="bc-fsize" style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);">·</small></div>
+                        <div style="font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:4px;letter-spacing:0.04em;">
+                            <b id="bc-rows" style="color:var(--ink);">--</b> 行 · UTF-8
+                        </div>
+                    </div>
+                    <span id="bc-rm" style="cursor:pointer;color:var(--ink-3);font-size:20px;line-height:1;padding:0 6px;">×</span>
+                </div>
+
+                {# 模型选择按钮 #}
+                <div style="margin-top:22px;">
+                    <label style="display:block;font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.06em;margin-bottom:8px;">分析模型</label>
+                    <button type="button" id="cx-model-btn" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--paper-2);border:1px solid var(--border-2);cursor:pointer;text-align:left;font-family:var(--serif);font-size:14px;color:var(--ink);">
+                        <span id="cx-model-name" style="font-weight:700;">{{ default_model_display|default:"BERT-CNN" }}</span>
+                        <span id="cx-model-badge" style="font-family:var(--sans);font-size:11px;font-weight:600;padding:2px 8px;background:var(--ink);color:var(--paper);letter-spacing:0.04em;">★ 推荐</span>
+                        <span style="margin-left:auto;color:var(--ink-3);font-family:var(--mono);font-size:12px;">点击切换 ▾</span>
+                    </button>
+                    <p id="cx-model-desc" style="font-family:var(--sans);font-size:12px;color:var(--ink-3);margin:8px 0 0;line-height:1.5;">BERT 编码 + 多尺度一维卷积, 适合大多数场景。</p>
+                    <input type="hidden" name="model" id="cx-model" value="{{ default_model_id|default:'bert_cnn' }}">
+                </div>
+
+                {# 操作 #}
+                <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                    <span style="font-family:var(--sans);font-size:12px;color:var(--ink-4);">处理后保存到分类历史 · 保留 30 天</span>
+                    <div style="display:flex;gap:8px;">
+                        <a href="/classify/text/" style="display:inline-flex;align-items:center;padding:12px 18px;background:var(--surface);color:var(--ink);border:1px solid var(--border-2);text-decoration:none;font-family:var(--serif);font-weight:600;font-size:13px;">取消</a>
+                        <button type="submit" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;font-family:var(--serif);font-weight:700;font-size:13px;">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                            开始批量分类
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {# ========== 右:上传须知 + 文件预览 ========== #}
+        <aside style="display:flex;flex-direction:column;gap:24px;">
+
+            <section class="ncf-card" style="background:var(--surface);border:1px solid var(--border);">
+                <header class="ncf-card-head" style="display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--border);border-left:3px solid var(--red);">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                    <h3 style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin:0;">上传须知</h3>
+                </header>
+                <ol style="margin:0;padding:18px 22px 18px 0;list-style:none;display:flex;flex-direction:column;gap:14px;">
+                    {% for tip in tips %}{% endfor %}
+                    <li style="display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding-left:22px;"><b style="width:22px;height:22px;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;">1</b><span style="font-family:var(--sans);font-size:13px;color:var(--ink-2);line-height:1.55;">文件格式: <code style="font-family:var(--mono);background:var(--paper-2);padding:1px 6px;font-size:12px;">.csv</code>, 推荐 UTF-8 编码 (GBK 也会自动识别)</span></li>
+                    <li style="display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding-left:22px;"><b style="width:22px;height:22px;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;">2</b><span style="font-family:var(--sans);font-size:13px;color:var(--ink-2);line-height:1.55;">表头若含 <code style="font-family:var(--mono);background:var(--paper-2);padding:1px 6px;font-size:12px;">text</code> / <code style="font-family:var(--mono);background:var(--paper-2);padding:1px 6px;font-size:12px;">content</code> / <code style="font-family:var(--mono);background:var(--paper-2);padding:1px 6px;font-size:12px;">正文</code> 列, 将使用该列</span></li>
+                    <li style="display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding-left:22px;"><b style="width:22px;height:22px;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;">3</b><span style="font-family:var(--sans);font-size:13px;color:var(--ink-2);line-height:1.55;">无表头或表头不匹配时, 自动选取最长的文本列 (跳过 URL/时间列)</span></li>
+                    <li style="display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding-left:22px;"><b style="width:22px;height:22px;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;">4</b><span style="font-family:var(--sans);font-size:13px;color:var(--ink-2);line-height:1.55;">单条文本建议 50–500 字, 过短或过长会影响判别质量</span></li>
+                    <li style="display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding-left:22px;"><b style="width:22px;height:22px;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;">5</b><span style="font-family:var(--sans);font-size:13px;color:var(--ink-2);line-height:1.55;">支持中文新闻文本, 其他语言识别率较低; 结果保留 30 天可导出</span></li>
+                </ol>
+            </section>
+
+            <section class="ncf-card" style="background:var(--surface);border:1px solid var(--border);">
+                <header class="ncf-card-head" style="display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--border);border-left:3px solid var(--red);">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" x2="9" y1="3" y2="21"/></svg>
+                    <h3 style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin:0;">文件预览</h3>
+                    <span style="margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-4);">前 5 行</span>
+                </header>
+                <div id="bc-preview" style="padding:0;">
+                    <div style="padding:24px 22px;text-align:center;color:var(--ink-4);font-family:var(--sans);font-size:12px;">上传文件后将显示预览</div>
+                </div>
+            </section>
+
+            {% if recent_batches %}
+            <section class="ncf-card" style="background:var(--surface);border:1px solid var(--border);">
+                <header class="ncf-card-head" style="display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--border);border-left:3px solid var(--red);">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+                    <h3 style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin:0;">最近批次</h3>
+                    <span style="margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-4);">最近 {{ recent_batches|length }} 条 · 可导出</span>
+                </header>
+                <div style="padding:0;">
+                    {% for b in recent_batches %}
+                    <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:14px 22px;border-bottom:1px solid var(--border);">
+                        <div style="min-width:0;">
+                            <div style="font-family:var(--serif);font-weight:600;font-size:13.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ b.file_name }}</div>
+                            <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);margin-top:4px;letter-spacing:0.04em;">
+                                #{{ b.id }} · {{ b.success_count }}/{{ b.total_count }} 条 · {{ b.model_display }} · {{ b.created_at|date:"m-d H:i" }}
+                            </div>
+                        </div>
+                        <a href="/classify/batch/{{ b.id }}/export/"
+                           style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:var(--ink);color:var(--paper);text-decoration:none;font-family:var(--serif);font-weight:600;font-size:12px;">
+                            ↓ 导出 CSV
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+        </aside>
+
+    </form>
+
+</div>
+
+{# ============ 模型选择弹窗 ============ #}
+<div id="cx-modal" style="position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;">
+    <div id="cx-modal-bg" style="position:absolute;inset:0;background:rgba(20,14,4,0.55);"></div>
+    <div style="position:relative;width:min(92vw,960px);max-height:88vh;background:var(--paper);border:1px solid var(--ink);box-shadow:0 30px 80px rgba(20,14,4,0.3);display:flex;flex-direction:column;">
+        <header style="display:flex;align-items:center;justify-content:space-between;padding:18px 26px;background:var(--ink);color:var(--paper);">
+            <h3 style="font-family:var(--serif);font-weight:700;font-size:18px;margin:0;color:var(--paper);">选择分类模型</h3>
+            <button type="button" id="cx-modal-close" style="background:none;border:none;color:var(--paper);font-size:22px;cursor:pointer;line-height:1;">×</button>
+        </header>
+        <div style="padding:20px 26px;overflow:auto;flex:1;">
+            <p style="font-family:var(--sans);font-size:13px;color:var(--ink-3);margin:0 0 18px;">系统支持 {{ available_models|length }} 种模型, 可对比不同架构的分类效果。首次加载某个模型需要几秒钟。</p>
+            <div id="cx-modal-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+                {% for m in available_models %}
+                <button type="button" class="cx-mcard" data-model="{{ m.id }}" data-name="{{ m.display_name }}" data-badge="{{ m.badge }}" data-desc="{{ m.description }}"
+                    style="position:relative;text-align:left;padding:18px 18px 16px;background:var(--surface);border:1.5px solid var(--border-2);cursor:pointer;font-family:var(--serif);transition:all .15s;">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px;">
+                        <b style="font-family:var(--serif);font-weight:700;font-size:15.5px;color:var(--ink);">{{ m.display_name }}</b>
+                        <span style="font-family:var(--sans);font-size:10.5px;font-weight:600;padding:2px 8px;background:var(--paper-2);color:var(--ink-3);letter-spacing:0.04em;border:1px solid var(--border-2);">{{ m.badge }}</span>
+                    </div>
+                    <p style="font-family:var(--sans);font-size:12px;color:var(--ink-3);line-height:1.55;margin:0;">{{ m.description }}</p>
+                    <span class="cx-mcard-check" style="display:none;position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--paper);align-items:center;justify-content:center;font-size:14px;">✓</span>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        <footer style="display:flex;justify-content:flex-end;gap:10px;padding:14px 26px;border-top:1px solid var(--border);background:var(--paper-2);">
+            <button type="button" id="cx-modal-cancel" style="padding:10px 22px;background:var(--surface);color:var(--ink);border:1px solid var(--border-2);cursor:pointer;font-family:var(--serif);font-weight:600;font-size:13px;">取消</button>
+            <button type="button" id="cx-modal-ok" style="padding:10px 22px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;font-family:var(--serif);font-weight:700;font-size:13px;">确定</button>
+        </footer>
+    </div>
+</div>
+
+<style>
+.cx-mcard:hover { border-color: var(--ink) !important; }
+.cx-mcard.is-selected { border-color: var(--ink) !important; background: var(--paper-2) !important; }
+.cx-mcard.is-selected .cx-mcard-check { display: inline-flex !important; }
+@media (max-width: 900px) {
+    .bcf-grid { grid-template-columns: 1fr !important; }
+    #cx-modal-grid { grid-template-columns: 1fr !important; }
+}
+</style>
+
+<script>
+(function() {
+    // 上传区交互
+    const inp = document.getElementById('bc-file');
+    const zone = document.getElementById('bc-zone');
+    const info = document.getElementById('bc-file-info');
+    const fname = document.getElementById('bc-fname');
+    const fsize = document.getElementById('bc-fsize');
+    const rows = document.getElementById('bc-rows');
+    const rm = document.getElementById('bc-rm');
+    const preview = document.getElementById('bc-preview');
+
+    // 多编码尝试解码 (浏览器无法可靠猜测编码,试 UTF-8 fatal 失败则降级 GBK)
+    function decodeBuffer(buf) {
+        try {
+            return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+        } catch (e) {}
+        try { return new TextDecoder('gbk').decode(buf); } catch (e) {}
+        try { return new TextDecoder('gb18030').decode(buf); } catch (e) {}
+        return new TextDecoder('utf-8').decode(buf);
+    }
+    // 朴素地按 CSV 规则取第一列 (忽略引号包裹的逗号)
+    function firstCsvField(line) {
+        let inQ = false, buf = '';
+        for (const ch of line) {
+            if (ch === '"') { inQ = !inQ; continue; }
+            if (ch === ',' && !inQ) return buf;
+            buf += ch;
+        }
+        return buf;
+    }
+
+    inp.addEventListener('change', async () => {
+        const f = inp.files[0]; if (!f) return;
+        fname.textContent = f.name;
+        fsize.textContent = '· ' + (f.size / 1024).toFixed(1) + ' KB';
+        zone.style.display = 'none';
+        info.style.display = 'grid';
+        const buf = await f.arrayBuffer();
+        const text = decodeBuffer(buf);
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        // 启发式: 第一行若像表头 (≤30 字且不含中文标点) 则跳过, 否则全部计数
+        const firstLine = lines[0] || '';
+        const looksLikeHeader = firstLine.length <= 30 && !/[，。；！？]/.test(firstLine);
+        const dataLines = looksLikeHeader ? lines.slice(1) : lines;
+        rows.textContent = dataLines.length.toLocaleString();
+        const html = ['<div style="display:grid;grid-template-columns:50px 1fr 70px;gap:10px;padding:10px 22px;background:var(--paper-2);font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.04em;border-bottom:1px solid var(--border);"><span>#</span><span>text</span><span style="text-align:right;">length</span></div>'];
+        dataLines.slice(0, 5).forEach((l, i) => {
+            const t = (firstCsvField(l) || l).replace(/^"|"$/g, '');
+            const safe = t.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+            html.push(`<div style="display:grid;grid-template-columns:50px 1fr 70px;gap:10px;padding:10px 22px;font-family:var(--serif);font-size:12.5px;color:var(--ink-2);border-bottom:1px solid var(--border);align-items:center;"><span style="font-family:var(--mono);font-size:11px;color:var(--ink-4);">${String(i+1).padStart(3,'0')}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${safe.substring(0, 80)}</span><span style="font-family:var(--mono);font-size:11px;color:var(--ink-4);text-align:right;">${t.length} 字</span></div>`);
+        });
+        preview.innerHTML = html.join('');
+    });
+
+    rm.addEventListener('click', () => {
+        inp.value = ''; zone.style.display = ''; info.style.display = 'none';
+        preview.innerHTML = '<div style="padding:24px 22px;text-align:center;color:var(--ink-4);font-family:var(--sans);font-size:12px;">上传文件后将显示预览</div>';
+    });
+
+    // ============ 模型选择弹窗 ============
+    const modal = document.getElementById('cx-modal');
+    const modalBg = document.getElementById('cx-modal-bg');
+    const modelBtn = document.getElementById('cx-model-btn');
+    const modelNameEl = document.getElementById('cx-model-name');
+    const modelBadgeEl = document.getElementById('cx-model-badge');
+    const modelDescEl = document.getElementById('cx-model-desc');
+    const modelInput = document.getElementById('cx-model');
+    const mcards = document.querySelectorAll('.cx-mcard');
+
+    function openModal() {
+        modal.style.display = 'flex';
+        mcards.forEach(c => c.classList.toggle('is-selected', c.dataset.model === modelInput.value));
+    }
+    function closeModal() { modal.style.display = 'none'; }
+
+    modelBtn.addEventListener('click', openModal);
+    document.getElementById('cx-modal-close').addEventListener('click', closeModal);
+    document.getElementById('cx-modal-cancel').addEventListener('click', closeModal);
+    modalBg.addEventListener('click', closeModal);
+
+    mcards.forEach(card => {
+        card.addEventListener('click', () => {
+            mcards.forEach(c => c.classList.remove('is-selected'));
+            card.classList.add('is-selected');
+        });
+    });
+
+    document.getElementById('cx-modal-ok').addEventListener('click', () => {
+        const picked = document.querySelector('.cx-mcard.is-selected');
+        if (picked) {
+            modelInput.value = picked.dataset.model;
+            modelNameEl.textContent = picked.dataset.name;
+            modelBadgeEl.textContent = picked.dataset.badge;
+            modelDescEl.textContent = picked.dataset.desc;
+        }
+        closeModal();
+    });
+
+    // 初始化默认描述
+    const def = document.querySelector(`.cx-mcard[data-model="${modelInput.value}"]`);
+    if (def) {
+        modelNameEl.textContent = def.dataset.name;
+        modelBadgeEl.textContent = def.dataset.badge;
+        modelDescEl.textContent = def.dataset.desc;
+    }
+})();
+</script>
+{% endblock %}

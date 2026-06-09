@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}{% if edit_user.pk %}编辑用户{% else %}新建用户{% endif %} · 管理中心{% endblock %}
+
+{% block body_class %}adm-body{% endblock %}
+
+{% block layout %}
+<div class="adm">
+{% include "manage/_sidebar.html" with active="user" %}
+
+<main class="adm-main" style="padding:0;">
+<div style="padding:24px 28px 20px;">
+    <div class="adm-top" style="padding-bottom:0;border-bottom:none;margin-bottom:0;">
+        <div>
+            <div class="crumb">管理中心 / 用户管理 / <b>{% if edit_user.pk %}编辑 {{ edit_user.username }}{% else %}新建{% endif %}</b></div>
+            <h1>{% if edit_user.pk %}编辑用户{% else %}新建用户{% endif %} <span class="count">/ {% if edit_user.pk %}#u_{{ edit_user.id }}{% endif %}</span></h1>
+        </div>
+        <div class="adm-top-actions">
+            <a class="adm-btn" href="/manage/users/">← 返回列表</a>
+        </div>
+    </div>
+</div>
+
+<form method="post" action="/manage/users/{{ edit_user.pk }}/edit/">
+{% csrf_token %}
+
+<div style="padding:0 28px 80px;">
+<div class="adm-form-shell">
+    <div class="adm-form">
+        <div class="adm-form-section">
+            <div class="adm-form-section-head"><h3><span class="step">1</span>账号信息</h3></div>
+            <div class="adm-row-2">
+                <div class="adm-field">
+                    <label>用户名 <span class="req">REQUIRED</span></label>
+                    <div class="adm-input"><input type="text" name="username" required value="{{ edit_user.username|default:'' }}"></div>
+                </div>
+                <div class="adm-field">
+                    <label>邮箱 <span class="req">REQUIRED</span></label>
+                    <div class="adm-input"><input type="email" name="email" required value="{{ edit_user.email|default:'' }}"></div>
+                </div>
+            </div>
+            <div class="adm-row-2">
+                <div class="adm-field">
+                    <label>显示昵称</label>
+                    <div class="adm-input"><input type="text" name="display_name" value="{{ edit_user.profile.display_name|default:edit_user.first_name|default:'' }}"></div>
+                </div>
+                <div class="adm-field">
+                    <label>角色 <span class="req">REQUIRED</span></label>
+                    <div class="adm-toggle-group">
+                        <label class="opt {% if not edit_user.is_staff and not edit_user.is_superuser %}is-on{% endif %}">
+                            <input type="radio" name="role" value="normal" {% if not edit_user.is_staff and not edit_user.is_superuser %}checked{% endif %} hidden>普通
+                        </label>
+                        <label class="opt {% if edit_user.is_staff and not edit_user.is_superuser %}is-on{% endif %}">
+                            <input type="radio" name="role" value="editor" {% if edit_user.is_staff and not edit_user.is_superuser %}checked{% endif %} hidden>编辑
+                        </label>
+                        <label class="opt {% if edit_user.is_superuser %}is-on{% endif %}">
+                            <input type="radio" name="role" value="admin" {% if edit_user.is_superuser %}checked{% endif %} hidden>管理员
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="adm-form-section">
+            <div class="adm-form-section-head">
+                <h3><span class="step">2</span>密码与安全</h3>
+                <span class="desc">PASSWORD · SECURITY</span>
+            </div>
+            <div class="adm-row-2">
+                <div class="adm-field">
+                    <label>新密码 <span class="hint">{% if edit_user.pk %}留空则不修改{% endif %}</span></label>
+                    <div class="adm-input"><input type="password" name="password" placeholder="至少 8 位"></div>
+                </div>
+                <div class="adm-field">
+                    <label>确认密码</label>
+                    <div class="adm-input"><input type="password" name="confirm_password" placeholder="再次输入"></div>
+                </div>
+            </div>
+            <div class="adm-field">
+                <label>账号状态</label>
+                <div class="adm-toggle-group">
+                    <label class="opt {% if edit_user.is_active or not edit_user.pk %}is-on{% endif %}">
+                        <input type="radio" name="status" value="active" {% if edit_user.is_active or not edit_user.pk %}checked{% endif %} hidden>正常
+                    </label>
+                    <label class="opt {% if not edit_user.is_active and edit_user.pk %}is-on{% endif %}">
+                        <input type="radio" name="status" value="suspended" {% if not edit_user.is_active and edit_user.pk %}checked{% endif %} hidden>暂停
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="adm-form-side">
+        {% if edit_user.pk %}
+        <div class="adm-card">
+            <div class="adm-card-head" style="padding-bottom:12px;margin-bottom:14px;">
+                <h3>账号摘要</h3>
+            </div>
+            <div class="cr-meta-grid">
+                <div class="cr-meta-row"><span class="lbl">用户 ID</span><span class="val mono">u_{{ edit_user.id }}</span></div>
+                <div class="cr-meta-row"><span class="lbl">注册时间</span><span class="val mono">{{ edit_user.date_joined|date:"Y.m.d" }}</span></div>
+                <div class="cr-meta-row"><span class="lbl">累计阅读</span><span class="val">{{ user_stats.read_count|default:0 }} 篇</span></div>
+                <div class="cr-meta-row"><span class="lbl">新闻分类次数</span><span class="val">{{ user_stats.classify_count|default:0 }} 次</span></div>
+                <div class="cr-meta-row"><span class="lbl">收藏</span><span class="val">{{ user_stats.bookmark_count|default:0 }} 篇</span></div>
+                <div class="cr-meta-row"><span class="lbl">最后登录</span><span class="val mono">{% if edit_user.last_login %}{{ edit_user.last_login|timesince }}前{% else %}从未{% endif %}</span></div>
+            </div>
+        </div>
+
+        <div class="adm-card" style="background:var(--red-soft);border-color:rgba(200,32,30,0.2);">
+            <div class="adm-card-head" style="border-bottom-color:rgba(200,32,30,0.15);padding-bottom:12px;margin-bottom:14px;">
+                <h3 style="color:var(--red);">危险操作</h3>
+            </div>
+            <p style="font-size:13px;line-height:1.55;color:var(--red-deep);margin-bottom:14px;">以下操作不可恢复, 请谨慎执行。</p>
+            <form method="post" action="/manage/users/{{ edit_user.id }}/delete/" onsubmit="return confirm('确认注销该账号? 不可恢复!')" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" style="display:inline-flex;align-items:center;justify-content:center;width:100%;height:38px;background:transparent;border:1px solid var(--red);color:var(--red);font-weight:700;font-size:13px;cursor:pointer;">注销该账号</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+</div>
+
+<div class="adm-save-bar">
+    <span class="info">修改记录将被 <b>分类日志</b> 自动追踪</span>
+    <div class="btn-grp">
+        <a href="/manage/users/" style="display:inline-flex;align-items:center;height:36px;padding:0 16px;color:#fff;text-decoration:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);font-size:13px;font-weight:600;">取消</a>
+        <button type="submit" class="primary">保存更改 →</button>
+    </div>
+</div>
+</form>
+</main>
+</div>
+{% endblock %}

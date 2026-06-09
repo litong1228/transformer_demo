@@ -1,0 +1,57 @@
+<!-- Reusable admin sidebar partial; included by manage/*.html templates -->
+<aside class="adm-side">
+    <div class="adm-side-head">
+        <span class="mark">智</span>
+        <span class="name">
+            <b>智阅 · 管理中心</b>
+            <small>ZHIYUE ADMIN</small>
+        </span>
+    </div>
+
+    <div class="adm-side-grp">CONTENT · 内容</div>
+    <div class="adm-side-nav">
+        <a href="/manage/" class="{% if active == 'dashboard' %}is-active{% endif %}">
+            <span class="ic">◎</span><span>仪表盘</span>
+        </a>
+        <a href="/manage/news/" class="{% if active == 'news' %}is-active{% endif %}">
+            <span class="ic">⊞</span><span>新闻管理</span>
+            {% if news_count %}<span class="n">{{ news_count }}</span>{% endif %}
+        </a>
+        <a href="/manage/category/" class="{% if active == 'category' %}is-active{% endif %}">
+            <span class="ic">▤</span><span>分类管理</span>
+            {% if category_count %}<span class="n">{{ category_count }}</span>{% endif %}
+        </a>
+        <a href="/manage/users/" class="{% if active == 'user' %}is-active{% endif %}">
+            <span class="ic">⊙</span><span>用户管理</span>
+            {% if user_count %}<span class="n">{{ user_count }}</span>{% endif %}
+        </a>
+    </div>
+
+    <div class="adm-side-grp">新闻分类</div>
+    <div class="adm-side-nav">
+        <a href="/classify/text/" class="{% if active == 'classify' %}is-active{% endif %}">
+            <span class="ic">⚛</span><span>新闻分类</span>
+            <span class="n">5</span>
+        </a>
+        <a href="/classify/batch/" class="{% if active == 'classify-batch' %}is-active{% endif %}">
+            <span class="ic">⊞</span><span>批量分类</span>
+        </a>
+        <a href="/classify/history/" class="{% if active == 'classify-log' %}is-active{% endif %}">
+            <span class="ic">⚙</span><span>分类历史</span>
+        </a>
+    </div>
+
+    <div class="adm-side-grp">SYSTEM · 系统</div>
+    <div class="adm-side-nav">
+        <a href="/admin/"><span class="ic">⚙</span><span>Django Admin</span></a>
+        <a href="/"><span class="ic">⇄</span><span>返回前台</span></a>
+    </div>
+
+    <div class="adm-side-foot">
+        <span class="av">{{ user.username|slice:":1"|upper }}</span>
+        <div class="info">
+            <b>{{ user.username }}</b>
+            <small>{% if user.is_superuser %}SUPER ADMIN{% else %}STAFF{% endif %} · 在线</small>
+        </div>
+    </div>
+</aside>

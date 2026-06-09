@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}批量分类结果 · 任务 #{{ task.id }}{% endblock %}
+
+{% block content %}
+<div class="page-body">
+
+<div class="page-head">
+    <div>
+        <div class="page-crumb">智阅新闻 / 批量分类 / <b>任务 #{{ task.id|default:"-" }}</b></div>
+        <h1 class="page-title">批量分类结果 <span class="count">/ {{ task.filename|default:"batch.csv" }}</span></h1>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn-ghost" style="height:34px;padding:0 14px;display:inline-flex;align-items:center;" href="/classify/batch/">↻ 重新上传</a>
+        {% if task.id and task.id != '-' %}
+        <a class="btn-ghost" style="height:34px;padding:0 14px;display:inline-flex;align-items:center;" href="/classify/batch/{{ task.id }}/export/">↓ 导出 CSV</a>
+        {% endif %}
+        <a class="btn-ink" style="height:34px;padding:0 14px;display:inline-flex;align-items:center;color:#fff;" href="/classify/history/">查看历史</a>
+    </div>
+</div>
+
+<div class="br-overview">
+    <div class="br-summary-card">
+        <div class="eb">TASK COMPLETE · 已完成</div>
+        <h2>{{ task.total|default:0 }} 条文本已全部分类</h2>
+        <div class="info">
+            {{ task.model_name|default:"BERT-CNN" }} v2.1 · 耗时 <b>{{ task.elapsed_display|default:"1m 48s" }}</b> · 平均 <b>{{ task.avg_ms|default:"87" }}ms / 条</b> · 完成于 {{ task.completed_at|date:"H:i:s" }}
+        </div>
+        <div class="stats">
+            <div class="s"><b>{{ task.total|default:0 }}</b><small>总条数</small></div>
+            <div class="s"><b>{{ task.high_conf|default:0 }}</b><small>高置信 ≥90%</small></div>
+            <div class="s"><b>{{ task.mid_conf|default:0 }}</b><small>待复核 70–90%</small></div>
+            <div class="s"><b>{{ task.low_conf|default:0 }}</b><small>低置信 &lt;70%</small></div>
+        </div>
+    </div>
+
+    <div class="br-dist">
+        <h3>类别分布</h3>
+        {% for cat in category_dist %}
+        <div class="row {{ cat.slug }}">
+            <span class="l">{{ cat.name }}</span>
+            <span class="bar"><i style="width:{{ cat.percent }}%"></i></span>
+            <span class="v">{{ cat.count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="br-table-card">
+    <div class="br-table-head">
+        <h3>分类明细 <span id="bf-count" style="font-family:var(--mono);font-size:11.5px;color:var(--ink-4);font-weight:400;margin-left:8px;"></span></h3>
+        <div class="actions" style="position:relative;">
+            <div class="bf-ctrl" style="position:relative;">
+                <button type="button" id="bf-filter-btn" class="bf-trigger">筛选 <span id="bf-filter-badge" style="display:none;margin:0 4px;color:var(--red);font-weight:700;"></span>▾</button>
+                <div id="bf-pop-filter" class="bf-pop" hidden>
+                    <div class="bf-pop-sect">
+                        <div class="bf-pop-title">分类</div>
+                        <div id="bf-cats" class="bf-chips"></div>
+                    </div>
+                    <div class="bf-pop-sect">
+                        <div class="bf-pop-title">状态</div>
+                        <div class="bf-chips">
+                            <label class="bf-chip"><input type="checkbox" class="bf-status" value="OK" checked><span>OK</span></label>
+                            <label class="bf-chip"><input type="checkbox" class="bf-status" value="REVIEW" checked><span>REVIEW</span></label>
+                        </div>
+                    </div>
+                    <div class="bf-pop-foot">
+                        <button type="button" id="bf-reset" class="bf-link">重置筛选</button>
+                        <button type="button" id="bf-close" class="bf-ok">完成</button>
+                    </div>
+                </div>
+            </div>
+            <div class="bf-ctrl" style="position:relative;">
+                <button type="button" id="bf-sort-btn" class="bf-trigger">排序: <span id="bf-sort-label">置信度 ↓</span></button>
+                <div id="bf-pop-sort" class="bf-pop bf-pop-narrow" hidden>
+                    <label class="bf-radio"><input type="radio" name="bf-sort" value="conf-desc" checked> 置信度 ↓</label>
+                    <label class="bf-radio"><input type="radio" name="bf-sort" value="conf-asc"> 置信度 ↑</label>
+                    <label class="bf-radio"><input type="radio" name="bf-sort" value="idx-asc"> 序号 ↑</label>
+                </div>
+            </div>
+            <a class="ink" href="/classify/batch/" style="background:var(--ink);color:var(--paper);border-color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;padding:0 12px;height:32px;font-size:12.5px;font-weight:600;">↻ 重新上传</a>
+        </div>
+    </div>
+    <div class="br-tbl-head">
+        <span>#</span><span>分类</span><span>文本</span><span>置信</span><span>状态</span><span>耗时</span>
+    </div>
+    {% for r in results|slice:":200" %}
+    <div class="br-tbl-row {{ r.cat_slug|default:'tech' }}"
+         data-idx="{{ forloop.counter }}"
+         data-conf="{{ r.confidence }}"
+         data-cat="{{ r.category|default:r.predicted_category|default:'未知' }}"
+         data-status="{% if r.confidence >= 0.9 %}OK{% else %}REVIEW{% endif %}">
+        <span class="num">#{{ forloop.counter|stringformat:"03d" }}</span>
+        <span class="cat">{{ r.category|default:r.predicted_category|default:"未知" }}</span>
+        <span class="txt">"{{ r.text|truncatechars:120 }}"</span>
+        <span class="conf-cell {% if r.confidence < 0.7 %}low{% endif %}">
+            <span class="v">{{ r.confidence_pct }}%</span>
+            <span class="mb"><i style="width:{{ r.confidence_pct }}%"></i></span>
+        </span>
+        <span class="status {% if r.confidence < 0.9 %}review{% endif %}">{% if r.confidence >= 0.9 %}OK{% else %}REVIEW{% endif %}</span>
+        <span class="time">{{ r.elapsed_ms|default:task.avg_ms|default:"—" }} ms</span>
+    </div>
+    {% empty %}
+    <div class="empty-state" style="margin:0;border:none;">
+        <h4>暂无结果</h4>
+        <p>该任务还未产生结果, 或已被清理。</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div class="pag" style="margin-top:24px;">
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">← 上一页</a>{% endif %}
+    {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}<span class="is-on">{{ num }}</span>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}<a href="?page={{ num }}">{{ num }}</a>{% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">下一页 →</a>{% endif %}
+</div>
+{% endif %}
+
+</div>
+
+<style>
+.bf-trigger {
+    cursor: pointer;
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    padding: 0 12px;
+    height: 32px;
+    font-size: 12.5px;
+    font-weight: 600;
+    font-family: var(--serif);
+}
+.bf-trigger:hover { border-color: var(--ink); }
+.bf-trigger.is-active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.bf-pop {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 200;
+    min-width: 280px;
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    box-shadow: 0 18px 40px rgba(20,14,4,0.18);
+    padding: 14px 16px;
+    font-family: var(--sans);
+}
+.bf-pop-narrow { min-width: 180px; }
+.bf-pop[hidden] { display: none; }
+.bf-pop-sect { margin-bottom: 12px; }
+.bf-pop-sect:last-child { margin-bottom: 0; }
+.bf-pop-title {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-4);
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+.bf-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.bf-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: var(--paper-2);
+    border: 1px solid var(--border-2);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-family: var(--serif);
+    user-select: none;
+}
+.bf-chip input { margin: 0; cursor: pointer; }
+.bf-chip:has(input:checked) { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.bf-pop-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+.bf-link {
+    background: none;
+    border: none;
+    color: var(--ink-3);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: var(--serif);
+    padding: 4px 0;
+    text-decoration: underline;
+}
+.bf-link:hover { color: var(--red); }
+.bf-ok {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--serif);
+}
+.bf-radio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--serif);
+}
+.bf-radio:hover { color: var(--red); }
+.br-tbl-row[hidden] { display: none !important; }
+</style>
+
+<script>
+(function () {
+    const rowsContainer = document.querySelector('.br-table-card');
+    const allRows = Array.from(document.querySelectorAll('.br-tbl-row'));
+    if (!allRows.length) return;
+
+    const countEl = document.getElementById('bf-count');
+    const total = allRows.length;
+    function refreshCount(visible) {
+        countEl.textContent = visible === total
+            ? '· 共 ' + total + ' 条'
+            : '· 显示 ' + visible + ' / ' + total + ' 条';
+    }
+
+    // ===== 弹层开关 =====
+    const filterBtn = document.getElementById('bf-filter-btn');
+    const sortBtn = document.getElementById('bf-sort-btn');
+    const filterPop = document.getElementById('bf-pop-filter');
+    const sortPop = document.getElementById('bf-pop-sort');
+
+    function closeAll() {
+        filterPop.hidden = true;
+        sortPop.hidden = true;
+    }
+    filterBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const opening = filterPop.hidden;
+        closeAll();
+        filterPop.hidden = !opening;
+    });
+    sortBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const opening = sortPop.hidden;
+        closeAll();
+        sortPop.hidden = !opening;
+    });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.bf-ctrl')) closeAll();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAll();
+    });
+    document.getElementById('bf-close').addEventListener('click', closeAll);
+
+    // ===== 收集分类去重,生成 chip =====
+    const cats = Array.from(new Set(allRows.map(r => r.dataset.cat))).sort();
+    const catsEl = document.getElementById('bf-cats');
+    cats.forEach(c => {
+        const label = document.createElement('label');
+        label.className = 'bf-chip';
+        label.innerHTML = '<input type="checkbox" class="bf-cat" value="' +
+            c.replace(/"/g, '&quot;') + '" checked><span>' +
+            c.replace(/</g, '&lt;') + '</span>';
+        catsEl.appendChild(label);
+    });
+
+    // ===== 应用筛选 =====
+    function applyFilter() {
+        const okCats = new Set(
+            Array.from(document.querySelectorAll('.bf-cat:checked')).map(i => i.value)
+        );
+        const okStatus = new Set(
+            Array.from(document.querySelectorAll('.bf-status:checked')).map(i => i.value)
+        );
+        let visible = 0;
+        allRows.forEach(r => {
+            const ok = okCats.has(r.dataset.cat) && okStatus.has(r.dataset.status);
+            r.hidden = !ok;
+            if (ok) visible++;
+        });
+
+        // 更新筛选按钮的徽标 (当有过滤生效时,显示已选/总数)
+        const badge = document.getElementById('bf-filter-badge');
+        const filtered = okCats.size < cats.length || okStatus.size < 2;
+        if (filtered) {
+            badge.style.display = 'inline';
+            badge.textContent = '(' + visible + ')';
+            filterBtn.classList.add('is-active');
+        } else {
+            badge.style.display = 'none';
+            filterBtn.classList.remove('is-active');
+        }
+        refreshCount(visible);
+    }
+    catsEl.addEventListener('change', applyFilter);
+    document.querySelectorAll('.bf-status').forEach(el => el.addEventListener('change', applyFilter));
+
+    document.getElementById('bf-reset').addEventListener('click', () => {
+        document.querySelectorAll('.bf-cat, .bf-status').forEach(i => { i.checked = true; });
+        applyFilter();
+    });
+
+    // ===== 应用排序 =====
+    function applySort(mode) {
+        const sorters = {
+            'conf-desc': (a, b) => parseFloat(b.dataset.conf) - parseFloat(a.dataset.conf),
+            'conf-asc':  (a, b) => parseFloat(a.dataset.conf) - parseFloat(b.dataset.conf),
+            'idx-asc':   (a, b) => parseInt(a.dataset.idx, 10) - parseInt(b.dataset.idx, 10),
+        };
+        const labelMap = {
+            'conf-desc': '置信度 ↓',
+            'conf-asc':  '置信度 ↑',
+            'idx-asc':   '序号 ↑',
+        };
+        allRows.sort(sorters[mode]);
+        const frag = document.createDocumentFragment();
+        allRows.forEach(r => frag.appendChild(r));
+        rowsContainer.appendChild(frag);
+        document.getElementById('bf-sort-label').textContent = labelMap[mode];
+    }
+    document.querySelectorAll('input[name="bf-sort"]').forEach(el => {
+        el.addEventListener('change', () => {
+            if (el.checked) {
+                applySort(el.value);
+                closeAll();
+            }
+        });
+    });
+
+    refreshCount(total);
+})();
+</script>
+{% endblock %}

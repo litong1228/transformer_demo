@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}{{ news.title }} · 智阅新闻{% endblock %}
+
+{% block content %}
+<div class="det">
+<div id="read-progress" class="det-progress"></div>
+
+<div class="det-wrap" style="grid-template-columns: 80px minmax(0, 720px) 300px;max-width:1180px;margin:0 auto;padding:40px 28px 56px;">
+    <article class="det-article">
+
+        <div class="det-meta">
+            {% if news.category %}<span class="cat-chip {{ news.category.slug|default:'tech' }}">{{ news.category.name }}</span>{% endif %}
+            {% if news.is_featured %}<span class="tag-red-out">头条</span>{% endif %}
+            <span class="pub">{{ news.publish_time|default:news.created_at|date:"Y.m.d H:i" }} · {{ news.author|default:"新华社" }}</span>
+            <span class="pub" style="color:var(--ink-3);">阅读 {{ news.read_minutes|default:"5" }} 分钟</span>
+        </div>
+
+        <h1 class="det-title">{{ news.title }}</h1>
+
+        {% if news.summary %}
+        <p class="det-lead">{{ news.summary }}</p>
+        {% endif %}
+
+        <div class="det-byline">
+            <div class="avatar">{{ news.author|default:"新"|slice:":1" }}</div>
+            <div class="who">
+                <b>{{ news.author|default:"新华社" }}</b>
+                记者 · {{ news.source_location|default:"北京报道" }}
+            </div>
+            <div class="actions">
+                <button class="det-act" type="button" onclick="if(navigator.share){navigator.share({title:document.title,url:location.href})}else{navigator.clipboard.writeText(location.href);alert('链接已复制')}">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+                    分享
+                </button>
+                <a class="det-act {% if is_bookmarked %}is-on{% endif %}" href="#" data-bookmark-id="{{ news.id }}">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                    <span class="bm-label">{% if is_bookmarked %}已收藏{% else %}收藏{% endif %}</span>
+                </a>
+            </div>
+        </div>
+
+        {# AI 推理横幅:仅当文章真有 ai_category 字段时显示;数据库新闻没跑过模型,故默认不显示 #}
+        {% if news.ai_category %}
+        <div class="det-ai-banner">
+            <div class="ai-icon">AI</div>
+            <div class="ai-text">
+                <b>智能分类: {{ news.ai_category }}</b>
+                BERT-CNN v2.1 在 {{ news.ai_elapsed_ms|default:"78" }}ms 内完成全文分类
+                <small>可在 <a href="/classify/text/" style="color:var(--ai);">新闻分类</a> 页运行其他模型进行交叉验证</small>
+            </div>
+            <div class="ai-conf">
+                <b>{{ news.ai_confidence }}%</b>
+                CONFIDENCE
+            </div>
+        </div>
+        {% endif %}
+
+        {% if news.image_url %}
+        <img class="det-hero-img" src="/img/?url={{ news.image_url|urlencode }}" alt="{{ news.title }}" style="width:100%;aspect-ratio:16/9;object-fit:cover;margin-bottom:12px;">
+        {% if news.image_caption %}
+        <div class="det-img-cap">{{ news.image_caption }}</div>
+        {% endif %}
+        {% endif %}
+
+        <div class="det-content news-content" style="margin-top:24px;">
+            {{ news.content|linebreaks }}
+        </div>
+
+        {% if news.source %}
+        <div style="margin-top:32px;padding:16px 20px;background:var(--paper-2);border-left:3px solid var(--ink);font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:0.02em;">
+            原文链接: <a href="{{ news.source }}" target="_blank" rel="noopener" style="color:var(--red);word-break:break-all;">{{ news.source }}</a>
+        </div>
+        {% endif %}
+    </article>
+
+    {# ============ 右侧栏:AI 卡 + 相关新闻 + 热门新闻 + 分类导航 ============ #}
+    <aside class="det-side" style="grid-column:3;grid-row:1 / span 2;align-self:start;position:sticky;top:24px;padding-left:32px;display:flex;flex-direction:column;gap:18px;">
+
+        {# 新闻分类工具入口(不假装本文已分类过) #}
+        <div class="side-mod is-ai" style="margin:0;">
+            <div class="side-mod-head">
+                <h4>新闻分类</h4>
+                <span class="tag">5 模型</span>
+            </div>
+            <p class="desc">把这篇文章丢进分类器,看看 5 个模型分别会判别到哪个领域。</p>
+            <a href="/classify/text/?text={{ news.content|truncatechars:500|urlencode }}" class="ai-result" style="text-decoration:none;color:inherit;margin-top:10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+                <b style="color:#fff;">分类本文 →</b>
+                <span class="conf">BERT · BERT-CNN · TextCNN…</span>
+            </a>
+        </div>
+
+        {# 相关新闻 mini-list #}
+        {% if related_news %}
+        <div class="side-mod">
+            <div class="side-mod-head">
+                <h4>相关新闻</h4>
+                <span class="tag">{{ news.category.name|default:"同分类" }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;">
+                {% for rel in related_news|slice:":5" %}
+                <a href="/detail/{{ rel.id }}/" style="display:grid;grid-template-columns:auto 1fr;gap:10px;padding:10px 0;border-bottom:1px dotted var(--border-2);color:inherit;text-decoration:none;align-items:baseline;">
+                    <span style="font-family:var(--mono);font-size:11px;color:var(--red);font-weight:700;letter-spacing:0.04em;">{{ forloop.counter|stringformat:"02d" }}</span>
+                    <div>
+                        <div style="font-family:var(--serif);font-weight:600;font-size:13px;color:var(--ink);line-height:1.4;margin-bottom:4px;">{{ rel.title|truncatechars:34 }}</div>
+                        <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:0.04em;">{{ rel.publish_time|default:rel.created_at|date:"m-d H:i" }} · {{ rel.view_count|default:0 }} reads</div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# 热门新闻 #}
+        {% if popular_news %}
+        <div class="side-mod">
+            <div class="side-mod-head">
+                <h4>热门新闻</h4>
+                <span class="tag">综合热度</span>
+            </div>
+            <div class="trend-list">
+                {% for n in popular_news|slice:":4" %}
+                <a href="/detail/{{ n.id }}/" class="trend-item" style="color:inherit;text-decoration:none;">
+                    <div class="rk">{{ forloop.counter|stringformat:"02d" }}</div>
+                    <div>
+                        <div class="ti">{{ n.title|truncatechars:32 }}</div>
+                        <div class="tm">{{ n.category.name|default:"—" }} · {{ n.view_count|default:0 }} reads</div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# 分类导航 #}
+        <div class="side-mod">
+            <div class="side-mod-head">
+                <h4>分类导航</h4>
+                <span class="tag">{{ categories|length }} 类</span>
+            </div>
+            <div class="cat-btns">
+                {% for cat in categories %}
+                <a href="/list/{{ cat.id }}/" class="cb" style="color:inherit;text-decoration:none;">{{ cat.name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+
+    </aside>
+
+    {# ============ 评论区:与文章同列(col 2),右侧栏继续向下延伸 ============ #}
+    <div class="det-comments" id="comments" style="grid-column:2;grid-row:2;margin-top:20px;min-width:0;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;padding-bottom:12px;border-bottom:2px solid var(--ink);margin-bottom:16px;">
+            <h4 style="font-family:var(--serif);font-weight:700;font-size:22px;color:var(--ink);margin:0;">读者评论 <span style="font-family:var(--mono);font-size:13px;color:var(--ink-4);font-weight:500;margin-left:8px;letter-spacing:0.06em;">{{ comment_count|default:0 }} 条</span></h4>
+            {% if can_comment %}<span style="font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.06em;">{{ user.username }} · 已登录</span>{% endif %}
+        </div>
+
+        {% if can_comment %}
+        <form method="post" action="/detail/{{ news.id }}/comment/" style="margin-bottom:18px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;">
+            {% csrf_token %}
+            <textarea name="content" placeholder="发表你的观点..." rows="2" required maxlength="1000" style="border:1px solid var(--border-2);padding:12px 14px;background:var(--surface);font-family:var(--serif);font-size:14px;line-height:1.55;color:var(--ink);resize:vertical;outline:none;"></textarea>
+            <button type="submit" style="padding:0 22px;height:44px;background:var(--ink);color:#fff;border:none;cursor:pointer;font-family:var(--serif);font-size:13px;font-weight:600;">发表评论</button>
+        </form>
+        {% else %}
+        <div style="margin-bottom:18px;padding:12px 16px;background:var(--surface);border:1px dashed var(--border-2);font-size:13px;color:var(--ink-3);font-family:var(--sans);">
+            <a href="/accounts/login/?next=/detail/{{ news.id }}/" style="color:var(--red);font-weight:600;">登录</a> 后即可发表评论
+        </div>
+        {% endif %}
+
+        <div style="display:flex;flex-direction:column;gap:1px;background:var(--border-2);">
+            {% for cm in top_comments %}
+            <div style="padding:14px 18px;background:var(--surface);display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:start;">
+                {% if cm.user.profile.avatar %}
+                <img src="{{ cm.user.profile.avatar.url }}" alt="{{ cm.user.username }}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;background:var(--paper-3);">
+                {% else %}
+                {% with letter=cm.user.username|cut:'_'|cut:'-'|cut:'.'|slice:':1'|upper %}
+                <span style="width:36px;height:36px;border-radius:50%;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:14px;">{% if letter %}{{ letter }}{% else %}{{ cm.user.username|slice:':1'|upper }}{% endif %}</span>
+                {% endwith %}
+                {% endif %}
+                <div style="min-width:0;">
+                    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">
+                        <strong style="font-family:var(--serif);font-size:13.5px;color:var(--ink);">{{ cm.user.username }}</strong>
+                        <span style="font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.04em;">{{ cm.created_at|date:"Y.m.d H:i" }}</span>
+                    </div>
+                    <div style="font-family:var(--serif);font-size:14px;line-height:1.55;color:var(--ink-2);">{{ cm.content|linebreaks }}</div>
+                </div>
+                {% if user.is_authenticated and cm.user == user or user.is_staff %}
+                <form method="post" action="/comment/{{ cm.id }}/delete/" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('确认删除该评论?')" style="background:none;border:none;color:var(--ink-4);font-size:11px;cursor:pointer;font-family:var(--mono);letter-spacing:0.04em;">删除</button>
+                </form>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div style="padding:32px;text-align:center;color:var(--ink-4);font-size:13px;background:var(--surface);">还没有评论, 抢个沙发?</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+</div>{# /.det #}
+
+<script>
+(function() {
+    const progress = document.getElementById('read-progress');
+    const article = document.querySelector('.det-content');
+    if (article && progress) {
+        const onScroll = () => {
+            const top = article.offsetTop;
+            const total = article.offsetHeight - window.innerHeight + 200;
+            const ratio = Math.max(0, Math.min(1, (window.scrollY - top + 200) / total));
+            progress.style.setProperty('--progress', (ratio * 100).toFixed(1) + '%');
+            const after = document.querySelector('.det-progress');
+            if (after) {
+                const fill = after.querySelector('::after');
+            }
+            progress.style.width = '100%';
+            // update via CSS variable using a child
+            let bar = progress.querySelector('.bar-fill');
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.className = 'bar-fill';
+                bar.style.cssText = 'position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--red),var(--red-deep));';
+                progress.style.position = 'relative';
+                progress.appendChild(bar);
+                // hide native ::after
+                progress.style.background = 'var(--paper-2)';
+            }
+            bar.style.width = (ratio * 100).toFixed(1) + '%';
+        };
+        window.addEventListener('scroll', onScroll, {passive: true});
+        onScroll();
+    }
+
+    // 字号切换
+    const fontBtn = document.getElementById('det-font-toggle');
+    if (fontBtn) {
+        const sizes = ['1rem', '1.08rem', '1.18rem'];
+        let idx = 0;
+        fontBtn.addEventListener('click', () => {
+            idx = (idx + 1) % sizes.length;
+            const c = document.querySelector('.det-content');
+            if (c) c.style.fontSize = sizes[idx];
+        });
+    }
+})();
+</script>
+{% endblock %}

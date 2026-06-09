@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}登录 · 智阅新闻{% endblock %}
+
+{% block body_class %}auth-body{% endblock %}
+
+{% block layout %}
+<main class="auth">
+    <section class="auth-form-side">
+        <a href="/" class="auth-back">返回首页</a>
+
+        <div class="auth-mast">
+            <div class="mark">智</div>
+            <div class="name">
+                <b>智阅新闻</b>
+                <small>ZHIYUE · BERT</small>
+            </div>
+            <div class="issue">
+                {% now "Y.m.d" %}
+            </div>
+        </div>
+
+        <div class="auth-title-block">
+            <div class="auth-eb">欢迎回来 · WELCOME BACK</div>
+            <h1 class="auth-title">登录账号</h1>
+            <p class="auth-lead">进入你的智能阅读空间, 继续我们尚未读完的故事。</p>
+        </div>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="auth-msg">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post" class="auth-form" novalidate>
+            {% csrf_token %}
+            {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
+
+            <div class="auth-field">
+                <label>账号 / Username</label>
+                <div class="auth-input">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <input type="text" name="username" placeholder="请输入账号或邮箱" required autofocus autocomplete="username" value="{{ request.POST.username|default:remembered_username|default:'' }}">
+                </div>
+            </div>
+
+            <div class="auth-field">
+                <label>密码 / Password</label>
+                <div class="auth-input">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <input type="password" id="pwd-1" name="password" placeholder="请输入密码" required autocomplete="current-password">
+                    <button type="button" class="pwd-toggle" onclick="(function(b){var i=document.getElementById('pwd-1');i.type=i.type==='password'?'text':'password';})(this)">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="auth-remember">
+                <label><input type="checkbox" name="remember" class="auth-rb"{% if remembered_username %} checked{% endif %}><span class="box"></span>记住我 7 天</label>
+                <span class="forgot"><a href="#">忘记密码?</a></span>
+            </div>
+
+            <div class="auth-submit">
+                <button type="submit" class="auth-submit-btn">登 录</button>
+                <span class="alt">还没有账号? <a href="/accounts/register/">立即注册</a></span>
+            </div>
+        </form>
+
+        <div class="auth-foot">
+            <div class="models">
+                <small>POWERED BY</small>
+                <span class="tag">BERT</span>
+                <span class="tag">BERT-CNN</span>
+                <span class="tag">BERT-RNN</span>
+                <span class="tag">TextCNN</span>
+                <span class="tag">FastText</span>
+            </div>
+            <div class="copy">© 2026 智阅新闻 · 京 ICP 备 00000000</div>
+        </div>
+    </section>
+
+    <aside class="auth-brand-side">
+        <div class="auth-brand-top">
+            <div class="auth-brand-eb">EDITORIAL × INTELLIGENCE</div>
+            <h2 class="auth-brand-quote">
+                每一条新闻, 都先被 <span class="em">编辑</span> 与 <span class="em">智能</span> 共同审阅。
+            </h2>
+            <div class="auth-brand-byline">主编手记 · 智阅新闻</div>
+        </div>
+
+        <div class="auth-brand-chart">
+            <div class="abc-head">
+                <span class="abc-eb">CATEGORY PREVIEW · 类别预览</span>
+                <span class="abc-meta">登录后查看你的真实分布</span>
+            </div>
+            <div class="abc-bars">
+                <div class="abc-row"><span class="lbl">科技</span><span class="bar tech"><i style="--w:78%"></i></span></div>
+                <div class="abc-row"><span class="lbl">财经</span><span class="bar fin"><i style="--w:64%"></i></span></div>
+                <div class="abc-row"><span class="lbl">体育</span><span class="bar sp"><i style="--w:52%"></i></span></div>
+                <div class="abc-row"><span class="lbl">娱乐</span><span class="bar et"><i style="--w:41%"></i></span></div>
+                <div class="abc-row"><span class="lbl">社会</span><span class="bar so"><i style="--w:33%"></i></span></div>
+                <div class="abc-row"><span class="lbl">教育</span><span class="bar edu"><i style="--w:25%"></i></span></div>
+                <div class="abc-row"><span class="lbl">时政</span><span class="bar pol"><i style="--w:18%"></i></span></div>
+            </div>
+        </div>
+
+        <div style="position:relative;z-index:1;">
+            <div class="auth-paper">
+                <div class="auth-paper-mast"><span>VOL. 1247</span><b>ZHIYUE</b><span>{% now "m.d.Y" %}</span></div>
+                <div class="auth-paper-eb">今日头条</div>
+                <h3 class="auth-paper-h">国务院召开常务会议, 部署优化营商<span style="color:var(--red);">环境</span></h3>
+                <p class="auth-paper-body">会议听取关于推进高质量发展和促进民营经济发展的工作汇报, 部署进一步优化营商环境、降低中小微企业融资成本的具体措施。</p>
+            </div>
+            <div class="auth-floats">
+                <span class="auth-float sp" style="top:-20px;right:40px;">体育</span>
+                <span class="auth-float fn" style="top:60px;right:-12px;">财经</span>
+                <span class="auth-float et" style="bottom:60px;left:-12px;">娱乐</span>
+                <span class="auth-float po" style="bottom:-12px;right:80px;">时政</span>
+            </div>
+        </div>
+    </aside>
+</main>
+{% endblock %}

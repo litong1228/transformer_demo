@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}搜索 "{{ query }}" · 智阅新闻{% endblock %}
+
+{% block content %}
+<div class="page">
+<div style="padding:0;">
+
+<div class="srch-head">
+    <div class="eb">搜索结果 · SEARCH RESULTS</div>
+    <h1>在新闻中搜索 <q>{{ query }}</q></h1>
+    <div class="info">
+        <span>共 <b>{{ total_count|default:0 }}</b> 篇匹配</span>
+        <i></i>
+        <span>耗时 <b>{{ elapsed|default:"0.04" }}s</b></span>
+        <i></i>
+        <span>BERT 已为搜索结果标注分类</span>
+    </div>
+    <form class="srch-form" method="get" action="/search/">
+        <input type="text" name="q" value="{{ query }}" />
+        <span class="scope">全部分类 ▾</span>
+        <button class="submit" type="submit">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            重新搜索
+        </button>
+    </form>
+</div>
+
+<div style="padding:0 28px 56px;">
+
+    <div class="tab-strip">
+        <a class="{% if not request.GET.cat %}is-active{% endif %}" href="?q={{ query }}">全部<span class="n">{{ total_count|default:"--" }}</span></a>
+        {% for cat in category_facets %}
+        <a class="{% if request.GET.cat == cat.slug %}is-active{% endif %}" href="?q={{ query }}&cat={{ cat.slug }}">{{ cat.name }}<span class="n">{{ cat.count }}</span></a>
+        {% endfor %}
+    </div>
+
+    <div class="list-items">
+        {% for news in news_list %}
+        <div class="list-row {% if forloop.first %}is-featured{% endif %}">
+            <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
+            <a href="/detail/{{ news.id }}/" style="display:block;">
+                {% if news.image_url %}
+                <img class="ph" src="/img/?url={{ news.image_url|urlencode }}" alt="{{ news.title }}" style="aspect-ratio:4/3;width:100%;object-fit:cover;">
+                {% else %}
+                <div class="ph is-photo-blue" style="aspect-ratio:4/3;width:100%;"></div>
+                {% endif %}
+            </a>
+            <div>
+                <div class="meta">
+                    {% if news.category %}<span class="cat-chip {{ news.category.slug|default:'tech' }}">{{ news.category.name }}</span>{% endif %}
+                    <span style="font-family:var(--mono);font-size:11px;color:var(--ink-4);">{{ news.publish_time|default:news.created_at|date:"Y.m.d" }}</span>
+                </div>
+                <h3><a href="/detail/{{ news.id }}/" style="color:inherit;">{{ news.title|safe }}</a></h3>
+                <p>{{ news.summary|default:news.content|truncatechars:150 }}</p>
+                <div class="row-foot">
+                    <span>{{ news.view_count|default:0 }} reads</span>
+                    {% if news.ai_confidence %}<span class="ai-mini">BERT-CNN · {{ news.ai_confidence }}%</span>{% endif %}
+                </div>
+            </div>
+            <a href="#" data-bookmark-id="{{ news.id }}" class="bookmark{% if news.id in bookmarked_ids %} is-on bookmarked{% endif %}" title="{% if news.id in bookmarked_ids %}取消收藏{% else %}收藏{% endif %}">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+            </a>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <div class="icon">?</div>
+            <h4>没有找到匹配的新闻</h4>
+            <p>试试其他关键词,或<a href="/" style="color:var(--red);">回到首页</a>浏览最新内容。</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+    <div class="pag" style="margin-top:32px;">
+        {% if page_obj.has_previous %}
+        <a href="?q={{ query }}&page={{ page_obj.previous_page_number }}">← 上一页</a>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+            {% if num == page_obj.number %}
+            <span class="is-on">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?q={{ query }}&page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <a href="?q={{ query }}&page={{ page_obj.next_page_number }}">下一页 →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+</div>
+</div>
+{% endblock %}

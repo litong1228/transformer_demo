@@ -1,0 +1,527 @@
+{% extends "base.html" %}
+
+{% block title %}新闻分类 · 智阅新闻{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="cls-body" style="max-width:1360px;margin:0 auto;padding:36px 28px 56px;">
+
+    <div class="page-head" style="padding-bottom:14px;margin-bottom:24px;border-bottom:2px solid var(--ink);display:flex;align-items:baseline;justify-content:space-between;">
+        <div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.12em;margin-bottom:8px;">新闻分类 · 基于深度学习</div>
+            <h1 style="font-family:var(--serif);font-weight:800;font-size:40px;color:var(--ink);margin:0;letter-spacing:-0.02em;">新闻分类</h1>
+            <p style="font-family:var(--sans);font-size:14px;color:var(--ink-3);margin:6px 0 0;">选择一个深度学习模型, 对中文新闻文本进行 10 类领域分类。</p>
+        </div>
+    </div>
+
+    <div class="ncf-grid" style="display:grid;grid-template-columns:1.5fr 1fr;gap:24px;align-items:start;">
+
+        {# ========== 左:新闻内容 + 模型选择 + 操作 ========== #}
+        <section class="ncf-card" style="background:var(--surface);border:1px solid var(--border);">
+            <header class="ncf-card-head" style="display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--border);border-left:3px solid var(--red);">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+                <h3 style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin:0;">新闻内容</h3>
+            </header>
+            <div style="padding:22px;">
+                <p style="font-family:var(--sans);font-size:13px;color:var(--ink-3);margin:0 0 12px;">请将新闻文本粘贴到下面的文本框中, 建议 50–500 字以获得更准确的结果。</p>
+
+                <textarea id="cx-text" placeholder="将新闻文本粘贴到这里..." rows="9" style="width:100%;padding:14px;border:1px solid var(--border-2);background:var(--paper-2);font-family:var(--serif);font-size:14.5px;line-height:1.65;color:var(--ink);resize:vertical;outline:none;"></textarea>
+
+                <div style="display:flex;justify-content:flex-end;font-family:var(--mono);font-size:11.5px;color:var(--ink-4);margin:8px 0 18px;">
+                    字数: <b id="cx-count" style="color:var(--ink);margin-left:6px;">0</b>
+                    <span style="margin:0 6px;">/</span>
+                    <span>500</span>
+                    <span id="cx-ok" style="display:none;color:var(--c-sports);margin-left:10px;">长度适宜</span>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
+                    <small style="font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.06em;">试试示例:</small>
+                    <button type="button" class="ex-chip cx-example-chip" data-cat="政">时政</button>
+                    <button type="button" class="ex-chip cx-example-chip" data-cat="科技">科技</button>
+                    <button type="button" class="ex-chip cx-example-chip" data-cat="财经">财经</button>
+                    <button type="button" class="ex-chip cx-example-chip" data-cat="体育">体育</button>
+                    <button type="button" class="ex-chip cx-example-chip" data-cat="娱乐">娱乐</button>
+                </div>
+
+                {# 模型选择按钮 — 点击触发弹窗 #}
+                <div style="margin-bottom:18px;">
+                    <label style="display:block;font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.06em;margin-bottom:8px;">分析模型</label>
+                    <button type="button" id="cx-model-btn" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--paper-2);border:1px solid var(--border-2);cursor:pointer;text-align:left;font-family:var(--serif);font-size:14px;color:var(--ink);">
+                        <span id="cx-model-name" style="font-weight:700;">{{ default_model_display|default:"BERT-CNN" }}</span>
+                        <span id="cx-model-badge" style="font-family:var(--sans);font-size:11px;font-weight:600;padding:2px 8px;background:var(--ink);color:var(--paper);letter-spacing:0.04em;">★ 推荐</span>
+                        <span style="margin-left:auto;color:var(--ink-3);font-family:var(--mono);font-size:12px;">点击切换 ▾</span>
+                    </button>
+                    <p id="cx-model-desc" style="font-family:var(--sans);font-size:12px;color:var(--ink-3);margin:8px 0 0;line-height:1.5;">BERT 编码 + 多尺度一维卷积, 结合上下文表征与局部 n-gram 特征。</p>
+                    <input type="hidden" id="cx-model" value="{{ default_model_id|default:'bert_cnn' }}">
+                </div>
+
+                <div style="display:flex;gap:10px;">
+                    <button type="button" id="cx-classify" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 22px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;font-family:var(--serif);font-weight:700;font-size:14px;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        开始分析
+                    </button>
+                    <button type="button" id="cx-clear" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 22px;background:var(--surface);color:var(--ink);border:1px solid var(--border-2);cursor:pointer;font-family:var(--serif);font-weight:600;font-size:14px;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                        清空
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        {# ========== 右:分析结果 + 类别说明 ========== #}
+        <aside style="display:flex;flex-direction:column;gap:24px;">
+
+            <section class="ncf-card" style="background:var(--surface);border:1px solid var(--border);">
+                <header class="ncf-card-head" style="display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--border);border-left:3px solid var(--red);">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" x2="7.01" y1="7" y2="7"/></svg>
+                    <h3 style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin:0;">分析结果</h3>
+                </header>
+                {# 顶部滑动进度条(loading 时显示) #}
+                <div id="cx-loading-bar" style="display:none;height:3px;background:var(--paper-2);position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:0;bottom:0;width:40%;background:linear-gradient(90deg,transparent,var(--red),transparent);animation:cx-slide 1.3s infinite ease-in-out;"></div>
+                </div>
+                <div id="cx-result-body" style="padding:0;">
+                    <div id="cx-result-empty" style="padding:32px 28px 28px;display:flex;flex-direction:column;align-items:stretch;">
+                        {# 蓝色 AI 分类预测横幅 — 参考原 design system 的 ai-banner 风格 #}
+                        <div style="display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:18px 20px;background:var(--ai,#1F3A5F);color:#fff;margin-bottom:22px;">
+                            <div style="width:48px;height:48px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:800;font-size:22px;color:#fff;">智</div>
+                            <div>
+                                <div style="font-family:var(--serif);font-weight:700;font-size:15px;color:#fff;margin-bottom:4px;">智能分类引擎 · 已就绪</div>
+                                <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.7);letter-spacing:0.04em;">BERT-CNN · {{ supported_categories|length|default:10 }} 类领域 · 等待文本输入</div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,0.85);letter-spacing:0.08em;text-transform:uppercase;">
+                                <span style="width:7px;height:7px;border-radius:50%;background:var(--ai-glow,#5C8BD9);box-shadow:0 0 8px var(--ai-glow,#5C8BD9);animation:cx-pulse 1.6s infinite;"></span>
+                                ONLINE
+                            </div>
+                        </div>
+
+                        <div style="text-align:center;">
+                            <div style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin-bottom:6px;">等待分析</div>
+                            <div style="font-family:var(--sans);font-size:13px;color:var(--ink-3);line-height:1.6;max-width:280px;margin:0 auto 22px;">把新闻文本粘贴到左侧, 点击「开始分析」, 这里会实时显示模型判别的类别与置信度。</div>
+                        </div>
+
+                        {# 占位预览(虚化,提示这里将填充) #}
+                        <div style="width:100%;display:flex;flex-direction:column;gap:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px dotted var(--border-2);opacity:0.55;">
+                                <span style="font-family:var(--sans);font-size:12.5px;color:var(--ink-3);">预测类别</span>
+                                <span style="display:inline-block;width:62px;height:18px;background:var(--paper-2);"></span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px dotted var(--border-2);opacity:0.45;">
+                                <span style="font-family:var(--sans);font-size:12.5px;color:var(--ink-3);">置信度</span>
+                                <span style="display:inline-block;width:54px;height:14px;background:var(--paper-2);"></span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px dotted var(--border-2);opacity:0.35;">
+                                <span style="font-family:var(--sans);font-size:12.5px;color:var(--ink-3);">分析耗时</span>
+                                <span style="display:inline-block;width:50px;height:14px;background:var(--paper-2);"></span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 4px;opacity:0.25;">
+                                <span style="font-family:var(--sans);font-size:12.5px;color:var(--ink-3);">使用模型</span>
+                                <span style="display:inline-block;width:80px;height:14px;background:var(--paper-2);"></span>
+                            </div>
+                        </div>
+
+                        {# 底部信息条:3 个数据 #}
+                        <div style="width:100%;margin-top:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:0;text-align:center;">
+                            <div style="padding:14px 8px;border-right:1px solid var(--border);">
+                                <div style="font-family:var(--serif);font-weight:800;font-size:22px;color:var(--ink);line-height:1;">{{ available_models|length|default:5 }}</div>
+                                <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:0.06em;margin-top:6px;">可用模型</div>
+                            </div>
+                            <div style="padding:14px 8px;border-right:1px solid var(--border);">
+                                <div style="font-family:var(--serif);font-weight:800;font-size:22px;color:var(--ink);line-height:1;">{{ supported_categories|length|default:10 }}</div>
+                                <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:0.06em;margin-top:6px;">领域覆盖</div>
+                            </div>
+                            <div style="padding:14px 8px;">
+                                <div style="font-family:var(--serif);font-weight:800;font-size:22px;color:var(--ink);line-height:1;">500<small style="font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-left:2px;font-weight:500;">字</small></div>
+                                <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:0.06em;margin-top:6px;">最长文本</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="cx-result-content" style="display:none;">
+                        <div class="cx-r-row" style="display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid var(--border);">
+                            <span style="font-family:var(--sans);font-size:13.5px;color:var(--ink-3);">预测类别</span>
+                            <b id="cx-r-cat" style="display:inline-flex;align-items:center;padding:6px 16px;background:var(--ink);color:var(--paper);font-family:var(--serif);font-weight:700;font-size:16px;">—</b>
+                        </div>
+                        <div class="cx-r-row" style="display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid var(--border);">
+                            <span style="font-family:var(--sans);font-size:13.5px;color:var(--ink-3);">置信度</span>
+                            <b id="cx-r-conf" style="font-family:var(--mono);font-weight:700;font-size:16px;color:var(--ink);">—</b>
+                        </div>
+                        <div class="cx-r-row" style="display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid var(--border);">
+                            <span style="font-family:var(--sans);font-size:13.5px;color:var(--ink-3);">分析耗时</span>
+                            <b id="cx-r-elapsed" style="font-family:var(--mono);font-weight:700;font-size:16px;color:var(--ink);">—</b>
+                        </div>
+                        <div class="cx-r-row" style="display:flex;justify-content:space-between;align-items:center;padding:16px 22px;">
+                            <span style="font-family:var(--sans);font-size:13.5px;color:var(--ink-3);">使用模型</span>
+                            <b id="cx-r-model" style="font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink);">—</b>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ncf-card" style="background:var(--surface);border:1px solid var(--border);">
+                <header class="ncf-card-head" style="display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--border);border-left:3px solid var(--red);">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 4 4 5-5"/></svg>
+                    <h3 style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin:0;">我的分类分布</h3>
+                    {% if user_stats %}<span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.04em;">共 {{ user_stats.total }} 次 · {{ user_stats.distinct }} 类</span>{% endif %}
+                </header>
+                <div style="padding:18px 22px;">
+                    {% if user_stats %}
+                    <div style="display:flex;flex-direction:column;gap:11px;">
+                        {% for r in user_stats.rows %}
+                        <div style="display:grid;grid-template-columns:52px 1fr 56px;gap:12px;align-items:center;">
+                            <span style="font-family:var(--serif);font-weight:600;font-size:13px;color:var(--ink);letter-spacing:0.02em;">{{ r.name }}</span>
+                            <span style="position:relative;height:6px;background:var(--paper-2);overflow:hidden;">
+                                <i class="cat-bar-fill" data-cat="{{ r.name }}" style="position:absolute;left:0;top:0;bottom:0;width:{{ r.percent }}%;"></i>
+                            </span>
+                            <span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);text-align:right;">{{ r.percent }}%<small style="font-family:var(--mono);font-size:10px;color:var(--ink-4);margin-left:4px;">{{ r.count }}</small></span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% elif user.is_authenticated %}
+                    <div style="padding:24px 8px;text-align:center;font-family:var(--sans);font-size:13px;color:var(--ink-4);line-height:1.6;">
+                        还没有分类记录,<br>提交第一条文本后这里会出现你的分类分布。
+                    </div>
+                    {% else %}
+                    <div style="padding:24px 8px;text-align:center;font-family:var(--sans);font-size:13px;color:var(--ink-4);line-height:1.6;">
+                        <a href="/accounts/login/?next=/classify/text/" style="color:var(--red);font-weight:600;">登录</a> 后查看你的分类分布<br>统计哪些领域出现最多。
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+        </aside>
+    </div>
+
+    {# ========== 支持的新闻类别(全宽,放在下方) ========== #}
+    <section class="ncf-card" style="background:var(--surface);border:1px solid var(--border);margin-top:24px;">
+        <header class="ncf-card-head" style="display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--border);border-left:3px solid var(--red);">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/></svg>
+            <h3 style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin:0;">支持的新闻类别</h3>
+            <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:0.04em;">{{ supported_categories|length }} 类</span>
+        </header>
+        <div style="padding:18px 22px;display:flex;flex-wrap:wrap;gap:8px;">
+            {% for c in supported_categories %}
+            <span style="display:inline-flex;align-items:center;padding:6px 14px;background:var(--paper-2);border:1px solid var(--border-2);font-family:var(--serif);font-size:13px;color:var(--ink-2);">{{ c }}</span>
+            {% endfor %}
+        </div>
+    </section>
+
+    {# ========== 最近分析(登录后) ========== #}
+    {% if user.is_authenticated %}
+    <section class="ncf-card" style="background:var(--surface);border:1px solid var(--border);margin-top:24px;">
+        <header class="ncf-card-head" style="display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--border);border-left:3px solid var(--red);">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <h3 style="font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);margin:0;">最近分析</h3>
+            <a href="/classify/history/" style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-3);text-decoration:none;letter-spacing:0.04em;">查看全部 →</a>
+        </header>
+        <div id="cx-history-body" style="padding:0;">
+            {% for r in recent_results %}
+            <div data-text="{{ r.text|escape }}" data-model="{{ r.model_used }}" class="cx-recent-row" style="display:grid;grid-template-columns:80px 1fr 90px;gap:14px;padding:14px 22px;border-bottom:1px solid var(--border);align-items:center;cursor:pointer;">
+                <b style="font-family:var(--serif);font-weight:700;color:var(--ink);font-size:14px;">{{ r.predicted_category }}</b>
+                <span style="font-family:var(--serif);font-size:13px;color:var(--ink-2);line-height:1.5;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;">{{ r.text|truncatechars:80 }}</span>
+                <span style="font-family:var(--mono);font-size:12px;color:var(--ink-3);text-align:right;">{{ r.confidence_pct }}%</span>
+            </div>
+            {% empty %}
+            <div style="padding:32px;text-align:center;color:var(--ink-4);font-size:13px;">还没有分析记录, 提交第一条文本后会出现在这里。</div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+</div>
+
+{# ============ 模型选择弹窗 ============ #}
+<div id="cx-modal" style="position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;">
+    <div id="cx-modal-bg" style="position:absolute;inset:0;background:rgba(20,14,4,0.55);"></div>
+    <div style="position:relative;width:min(92vw,960px);max-height:88vh;background:var(--paper);border:1px solid var(--ink);box-shadow:0 30px 80px rgba(20,14,4,0.3);display:flex;flex-direction:column;">
+
+        <header style="display:flex;align-items:center;justify-content:space-between;padding:18px 26px;background:var(--ink);color:var(--paper);">
+            <h3 style="font-family:var(--serif);font-weight:700;font-size:18px;margin:0;color:var(--paper);">选择分类模型</h3>
+            <button type="button" id="cx-modal-close" style="background:none;border:none;color:var(--paper);font-size:22px;cursor:pointer;line-height:1;">×</button>
+        </header>
+
+        <div style="padding:20px 26px;overflow:auto;flex:1;">
+            <p style="font-family:var(--sans);font-size:13px;color:var(--ink-3);margin:0 0 18px;">系统支持 {{ available_models|length }} 种模型, 可对比不同架构的分类效果。首次加载某个模型需要几秒钟。</p>
+
+            <div id="cx-modal-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+                {% for m in available_models %}
+                <button type="button" class="cx-mcard" data-model="{{ m.id }}" data-name="{{ m.display_name }}" data-badge="{{ m.badge }}" data-desc="{{ m.description }}"
+                    style="position:relative;text-align:left;padding:18px 18px 16px;background:var(--surface);border:1.5px solid var(--border-2);cursor:pointer;font-family:var(--serif);transition:all .15s;">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px;">
+                        <b style="font-family:var(--serif);font-weight:700;font-size:15.5px;color:var(--ink);">{{ m.display_name }}</b>
+                        <span style="font-family:var(--sans);font-size:10.5px;font-weight:600;padding:2px 8px;background:var(--paper-2);color:var(--ink-3);letter-spacing:0.04em;border:1px solid var(--border-2);">{{ m.badge }}</span>
+                    </div>
+                    <p style="font-family:var(--sans);font-size:12px;color:var(--ink-3);line-height:1.55;margin:0;">{{ m.description }}</p>
+                    <span class="cx-mcard-check" style="display:none;position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--paper);align-items:center;justify-content:center;font-size:14px;">✓</span>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <footer style="display:flex;justify-content:flex-end;gap:10px;padding:14px 26px;border-top:1px solid var(--border);background:var(--paper-2);">
+            <button type="button" id="cx-modal-cancel" style="padding:10px 22px;background:var(--surface);color:var(--ink);border:1px solid var(--border-2);cursor:pointer;font-family:var(--serif);font-weight:600;font-size:13px;">取消</button>
+            <button type="button" id="cx-modal-ok" style="padding:10px 22px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;font-family:var(--serif);font-weight:700;font-size:13px;">确定</button>
+        </footer>
+    </div>
+</div>
+
+<style>
+.cx-mcard:hover { border-color: var(--ink) !important; }
+.cx-mcard.is-selected { border-color: var(--ink) !important; background: var(--paper-2) !important; }
+.cx-mcard.is-selected .cx-mcard-check { display: inline-flex !important; }
+
+/* ===== Loading 动画 ===== */
+@keyframes cx-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+}
+@keyframes cx-shimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: -100% 50%; }
+}
+@keyframes cx-dots {
+    0%, 20% { content: ''; }
+    40% { content: '.'; }
+    60% { content: '..'; }
+    80%, 100% { content: '...'; }
+}
+@keyframes cx-fadein {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes cx-ring {
+    0%, 100% { transform: scale(1); opacity: 0.55; }
+    50% { transform: scale(1.08); opacity: 1; }
+}
+@keyframes cx-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.85); }
+}
+.cx-skel {
+    display: inline-block;
+    min-width: 90px;
+    height: 1.1em;
+    background: linear-gradient(90deg, var(--paper-2) 0%, var(--border-2) 50%, var(--paper-2) 100%);
+    background-size: 200% 100%;
+    animation: cx-shimmer 1.2s infinite linear;
+    color: transparent;
+    vertical-align: middle;
+}
+.cx-loading-cat {
+    display: inline-block;
+    padding: 6px 16px;
+    background: linear-gradient(90deg, var(--ink-3) 0%, var(--ink) 50%, var(--ink-3) 100%);
+    background-size: 200% 100%;
+    animation: cx-shimmer 1.2s infinite linear;
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: rgba(255,255,255,0.85);
+}
+.cx-loading-cat::after {
+    content: '...';
+    display: inline-block;
+    min-width: 1.5em;
+    text-align: left;
+    animation: cx-dots 1.4s infinite steps(4);
+}
+.cx-result-row-fadein {
+    animation: cx-fadein .3s ease-out both;
+}
+.ex-chip {
+    padding:5px 12px;background:var(--paper-2);border:1px solid var(--border-2);
+    font-family:var(--serif);font-size:12.5px;color:var(--ink-2);cursor:pointer;
+}
+.ex-chip:hover { border-color: var(--ink); }
+.cx-recent-row:hover { background: var(--paper-2); }
+@media (max-width: 900px) {
+    .ncf-grid { grid-template-columns: 1fr !important; }
+    #cx-modal-grid { grid-template-columns: 1fr !important; }
+}
+</style>
+
+<script id="cx-examples-data" type="application/json">{
+"政": "国务院今日召开常务会议, 听取关于推进高质量发展和促进民营经济发展的工作汇报, 部署进一步优化营商环境、降低企业融资成本的具体措施。会议强调要加大对中小微企业的支持力度, 确保各项惠企政策落到实处。",
+"科技": "我国科研团队最新研发出新一代人工智能芯片, 性能较上一代提升约 60%, 能效比领先国际同类产品。该芯片采用先进的 7 纳米工艺, 集成超过 200 亿个晶体管, 可广泛应用于自动驾驶、智能手机和数据中心等领域。",
+"体育": "国家男子篮球队在今晚结束的国际友谊赛中以 95 比 88 战胜对手, 提前锁定下届世界杯入场券。比赛中, 主力前锋全场拿下 28 分 12 篮板, 多次在关键时刻命中三分, 成为本场 MVP。",
+"财经": "上海证券交易所今日数据显示, 沪指今日收涨 1.32%, 报 3340 点; 深成指上涨 1.56%, 创业板指数大涨 2.14%。新能源、半导体板块领涨, 两市成交额突破 9000 亿元, 北向资金净流入超 80 亿元。",
+"娱乐": "由知名导演执导的史诗大片今日全球公映, 首日全球票房突破 1.2 亿美元, 创下年度开画纪录。该片汇集多位国际一线明星, 制作历时 4 年, 特效镜头超过 2000 个, 被影评人誉为本年度最值得期待的视听盛宴。"
+}</script>
+
+<script>
+(function () {
+    const csrf = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+    const ta = document.getElementById('cx-text');
+    const cnt = document.getElementById('cx-count');
+    const ok = document.getElementById('cx-ok');
+    const examples = JSON.parse(document.getElementById('cx-examples-data').textContent);
+
+    // 字数 + 示例
+    ta.addEventListener('input', () => {
+        const n = ta.value.length;
+        cnt.textContent = n;
+        ok.style.display = (n >= 50 && n <= 500) ? 'inline' : 'none';
+    });
+    document.querySelectorAll('.cx-example-chip').forEach(c => {
+        c.addEventListener('click', () => {
+            const cat = c.dataset.cat;
+            if (examples[cat]) { ta.value = examples[cat]; ta.dispatchEvent(new Event('input')); ta.focus(); }
+        });
+    });
+    document.getElementById('cx-clear').addEventListener('click', () => {
+        ta.value = ''; ta.dispatchEvent(new Event('input'));
+        document.getElementById('cx-result-empty').style.display = '';
+        document.getElementById('cx-result-content').style.display = 'none';
+    });
+
+    // ============ 模型选择弹窗 ============
+    const modal = document.getElementById('cx-modal');
+    const modalBg = document.getElementById('cx-modal-bg');
+    const modelBtn = document.getElementById('cx-model-btn');
+    const modelNameEl = document.getElementById('cx-model-name');
+    const modelBadgeEl = document.getElementById('cx-model-badge');
+    const modelDescEl = document.getElementById('cx-model-desc');
+    const modelInput = document.getElementById('cx-model');
+    const mcards = document.querySelectorAll('.cx-mcard');
+
+    function openModal() {
+        modal.style.display = 'flex';
+        mcards.forEach(c => c.classList.toggle('is-selected', c.dataset.model === modelInput.value));
+    }
+    function closeModal() { modal.style.display = 'none'; }
+
+    modelBtn.addEventListener('click', openModal);
+    document.getElementById('cx-modal-close').addEventListener('click', closeModal);
+    document.getElementById('cx-modal-cancel').addEventListener('click', closeModal);
+    modalBg.addEventListener('click', closeModal);
+
+    mcards.forEach(card => {
+        card.addEventListener('click', () => {
+            mcards.forEach(c => c.classList.remove('is-selected'));
+            card.classList.add('is-selected');
+        });
+    });
+
+    document.getElementById('cx-modal-ok').addEventListener('click', () => {
+        const picked = document.querySelector('.cx-mcard.is-selected');
+        if (picked) {
+            modelInput.value = picked.dataset.model;
+            modelNameEl.textContent = picked.dataset.name;
+            modelBadgeEl.textContent = picked.dataset.badge;
+            modelDescEl.textContent = picked.dataset.desc;
+        }
+        closeModal();
+    });
+
+    // 初始化:把默认模型的描述也填上
+    const def = document.querySelector(`.cx-mcard[data-model="${modelInput.value}"]`);
+    if (def) {
+        modelNameEl.textContent = def.dataset.name;
+        modelBadgeEl.textContent = def.dataset.badge;
+        modelDescEl.textContent = def.dataset.desc;
+    }
+
+    // ============ 分类请求 ============
+    const verdict = p => p >= 0.95 ? '模型非常确定。' : p >= 0.85 ? '模型高度确定。' : p >= 0.7 ? '模型较为确定, 可放心采用。' : p >= 0.5 ? '模型有一定把握, 建议人工复核。' : '模型不太确定, 可能存在多个相近类别。';
+
+    const classifyBtn = document.getElementById('cx-classify');
+    const loadingBar = document.getElementById('cx-loading-bar');
+
+    function setLoading(on) {
+        loadingBar.style.display = on ? '' : 'none';
+        classifyBtn.disabled = on;
+        classifyBtn.style.opacity = on ? '0.6' : '';
+        classifyBtn.style.cursor = on ? 'wait' : '';
+        if (on) {
+            document.getElementById('cx-result-empty').style.display = 'none';
+            document.getElementById('cx-result-content').style.display = '';
+            document.getElementById('cx-r-cat').outerHTML = '<b id="cx-r-cat" class="cx-loading-cat"></b>';
+            document.getElementById('cx-r-conf').innerHTML = '<span class="cx-skel"></span>';
+            document.getElementById('cx-r-elapsed').innerHTML = '<span class="cx-skel" style="min-width:60px;"></span>';
+            document.getElementById('cx-r-model').innerHTML = '<span class="cx-skel" style="min-width:110px;"></span>';
+        }
+    }
+
+    function showResult(data) {
+        // 完成 -> 用真实值替换骨架,带 fade-in
+        const catEl = document.getElementById('cx-r-cat');
+        catEl.outerHTML = `<b id="cx-r-cat" style="display:inline-flex;align-items:center;padding:6px 16px;background:var(--ink);color:var(--paper);font-family:var(--serif);font-weight:700;font-size:16px;" class="cx-result-row-fadein">${data.category}</b>`;
+
+        const conf = (data.confidence * 100).toFixed(2);
+        animateNumber('cx-r-conf', conf, '%', 'var(--mono)', 16);
+        document.getElementById('cx-r-elapsed').innerHTML = `<span class="cx-result-row-fadein" style="display:inline-block;">${data.elapsed_ms} ms</span>`;
+        document.getElementById('cx-r-model').innerHTML = `<span class="cx-result-row-fadein" style="display:inline-block;">${data.model_name}</span>`;
+    }
+
+    function animateNumber(id, target, unit, font, size) {
+        const el = document.getElementById(id);
+        el.innerHTML = '';
+        el.style.fontFamily = font;
+        el.style.fontWeight = '700';
+        el.style.fontSize = size + 'px';
+        el.style.color = 'var(--ink)';
+        el.classList.add('cx-result-row-fadein');
+        const finalVal = parseFloat(target);
+        const start = performance.now();
+        const dur = 600;
+        function step(t) {
+            const p = Math.min(1, (t - start) / dur);
+            const eased = 1 - Math.pow(1 - p, 3);
+            const v = (eased * finalVal);
+            el.textContent = v.toFixed(2) + unit;
+            if (p < 1) requestAnimationFrame(step);
+            else el.textContent = target + unit;
+        }
+        requestAnimationFrame(step);
+    }
+
+    classifyBtn.addEventListener('click', async () => {
+        const text = ta.value.trim();
+        if (!text) { alert('请先输入要分类的新闻文本'); ta.focus(); return; }
+
+        setLoading(true);
+        try {
+            const fd = new FormData();
+            fd.append('text', text); fd.append('model', modelInput.value);
+            const resp = await fetch('/classify/text/api/', {
+                method:'POST', headers:{'X-CSRFToken': csrf}, body: fd, credentials:'same-origin'
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.ok) throw new Error(data.error || '分析失败');
+            setLoading(false);
+            showResult(data);
+        } catch (e) {
+            setLoading(false);
+            const catEl = document.getElementById('cx-r-cat');
+            catEl.outerHTML = `<b id="cx-r-cat" style="display:inline-flex;align-items:center;padding:6px 16px;background:#fdecea;color:#c0241d;font-family:var(--serif);font-weight:700;font-size:14px;border:1px solid #c0241d;">分析失败</b>`;
+            document.getElementById('cx-r-conf').textContent = '—';
+            document.getElementById('cx-r-elapsed').textContent = '—';
+            document.getElementById('cx-r-model').textContent = (e.message || '未知错误').substring(0, 60);
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') document.getElementById('cx-classify').click();
+    });
+
+    // 最近分析:点击回填
+    document.querySelectorAll('.cx-recent-row').forEach(row => {
+        row.addEventListener('click', () => {
+            ta.value = row.dataset.text;
+            ta.dispatchEvent(new Event('input'));
+            window.scrollTo({top:0, behavior:'smooth'});
+        });
+    });
+
+    // 我的分类分布:横条按类别上色
+    const STAT_COLORS = {
+        '体育':'var(--c-sports)','科技':'var(--c-tech)','财经':'var(--c-finance)',
+        '娱乐':'var(--c-ent)','时政':'var(--c-politics)','教育':'var(--c-edu)',
+        '社会':'var(--c-society)','家居':'#5b8a6b','房产':'#a35b3a',
+        '时尚':'#c64b8c','游戏':'#7853b7',
+    };
+    document.querySelectorAll('.cat-bar-fill').forEach(b => {
+        b.style.background = STAT_COLORS[b.dataset.cat] || 'var(--ink-3)';
+    });
+})();
+</script>
+{% endblock %}

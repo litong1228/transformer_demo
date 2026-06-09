@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}用户管理 · 管理中心{% endblock %}
+
+{% block body_class %}adm-body{% endblock %}
+
+{% block layout %}
+<div class="adm">
+{% include "manage/_sidebar.html" with active="user" %}
+
+<main class="adm-main">
+    <div class="adm-top">
+        <div>
+            <div class="crumb">管理中心 / <b>用户管理</b></div>
+            <h1>用户管理 <span class="count">/ {{ total_count|default:0 }} 人{% if month_new %} · 本月 +{{ month_new }}{% endif %}</span></h1>
+        </div>
+        <div class="adm-top-actions">
+            <a class="adm-btn" href="/manage/">仪表盘</a>
+            <a class="adm-btn primary" href="/admin/auth/user/add/" target="_blank">+ 添加用户</a>
+        </div>
+    </div>
+
+    <div class="adm-table">
+        <form method="get" class="adm-toolbar">
+            <label class="adm-search">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="搜索用户名、邮箱...">
+            </label>
+            <a class="adm-chip {% if not request.GET.role %}is-on{% endif %}" href="?">全部<span class="n">{{ total_count|default:0 }}</span></a>
+            <a class="adm-chip {% if request.GET.role == 'normal' %}is-on{% endif %}" href="?role=normal">普通<span class="n">{{ count_normal|default:0 }}</span></a>
+            <a class="adm-chip {% if request.GET.role == 'editor' %}is-on{% endif %}" href="?role=editor">编辑<span class="n">{{ count_editor|default:0 }}</span></a>
+            <a class="adm-chip {% if request.GET.role == 'admin' %}is-on{% endif %}" href="?role=admin">管理员<span class="n">{{ count_admin|default:0 }}</span></a>
+            <a class="adm-chip {% if request.GET.status == 'disabled' %}is-on{% endif %}" href="?status=disabled">已禁用<span class="n">{{ count_disabled|default:0 }}</span></a>
+        </form>
+
+        <div class="adm-thead adm-user-cols">
+            <span><input type="checkbox"></span>
+            <span>头像</span>
+            <span>用户名</span>
+            <span>邮箱</span>
+            <span>角色</span>
+            <span>注册</span>
+            <span>最后登录</span>
+            <span>操作</span>
+        </div>
+
+        {% for u in user_list %}
+        <div class="adm-trow adm-user-cols">
+            <span><input type="checkbox" name="ids" value="{{ u.id }}"></span>
+            <span style="width:32px;height:32px;background:{% if u.is_active %}var(--red){% else %}var(--paper-3){% endif %};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:14px;">{{ u.username|slice:":1"|upper }}</span>
+            <div class="ttl">
+                <a href="/manage/users/{{ u.id }}/edit/" style="color:inherit;">{{ u.username }}</a>
+                <small>{% if not u.is_active %}已禁用{% else %}ID: u_{{ u.id }}{% endif %}</small>
+            </div>
+            <span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);">{{ u.email }}</span>
+            <span class="status {% if u.is_superuser %}archive{% elif u.is_staff %}pub{% else %}draft{% endif %}">
+                {% if u.is_superuser %}管理员{% elif u.is_staff %}编辑{% else %}普通{% endif %}
+            </span>
+            <span class="meta">{{ u.date_joined|timesince }}前</span>
+            <span class="meta">{% if u.last_login %}{{ u.last_login|timesince }}前{% else %}从未{% endif %}</span>
+            <div class="actions">
+                <a href="/manage/users/{{ u.id }}/edit/" title="编辑">✎</a>
+                <form method="post" action="/manage/users/{{ u.id }}/toggle-active/" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" title="{% if u.is_active %}禁用{% else %}启用{% endif %}" style="background:none;border:none;color:inherit;cursor:pointer;font-size:inherit;padding:0;">{% if u.is_active %}⏸{% else %}↺{% endif %}</button>
+                </form>
+                <form method="post" action="/manage/users/{{ u.id }}/delete/" style="display:inline;" onsubmit="return confirm('确认删除?')">
+                    {% csrf_token %}
+                    <button type="submit" title="删除" style="background:none;border:none;color:inherit;cursor:pointer;font-size:inherit;padding:0;">×</button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state" style="margin:0;border:none;">
+            <div class="icon">⊙</div>
+            <h4>暂无用户</h4>
+            <p>没有匹配的用户记录。</p>
+        </div>
+        {% endfor %}
+
+        <div class="adm-table-foot">
+            <span class="info">显示 {{ page_obj.start_index|default:0 }}-{{ page_obj.end_index|default:0 }} / 共 {{ total_count|default:0 }} 用户</span>
+            {% if is_paginated %}
+            <div class="pag">
+                {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">← 上一页</a>{% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}<span class="is-on">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}<a href="?page={{ num }}">{{ num }}</a>{% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">下一页 →</a>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</main>
+</div>
+{% endblock %}

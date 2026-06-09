@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}我的收藏 · 智阅新闻{% endblock %}
+
+{% block content %}
+<div class="page-body">
+
+<div class="page-head">
+    <div>
+        <div class="page-crumb">智阅新闻 / 个人中心 / <b>我的收藏</b></div>
+        <h1 class="page-title">我的收藏 <span class="count">/ {{ total_count|default:bookmarks|length }} 篇{% if category_count %} · 跨 {{ category_count }} 个分类{% endif %}</span></h1>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn-ghost" style="height:34px;padding:0 14px;display:inline-flex;align-items:center;" href="?export=csv">导出 CSV</a>
+        <a class="btn-ink" style="height:34px;padding:0 14px;display:inline-flex;align-items:center;color:#fff;" href="/accounts/bookmarks/manage/">整理收藏</a>
+    </div>
+</div>
+
+<div class="tab-strip">
+    <a class="{% if not request.GET.cat %}is-active{% endif %}" href="?">全部<span class="n">{{ total_count|default:0 }}</span></a>
+    {% for cat in category_facets %}
+    <a class="{% if request.GET.cat == cat.slug %}is-active{% endif %}" href="?cat={{ cat.slug }}">{{ cat.name }}<span class="n">{{ cat.count }}</span></a>
+    {% endfor %}
+</div>
+
+<div class="up-bm-grid">
+    {% for bm in bookmarks %}
+    <div class="up-bm-card">
+        <a href="/detail/{{ bm.news.id }}/">
+            {% if bm.news.image_url %}
+            <img class="ph" src="/img/?url={{ bm.news.image_url|urlencode }}" alt="{{ bm.news.title }}" style="aspect-ratio:auto;height:100%;width:140px;object-fit:cover;">
+            {% else %}
+            <div class="ph is-photo-blue"></div>
+            {% endif %}
+        </a>
+        <div class="body">
+            <a class="bookmarked" href="/accounts/bookmarks/toggle/{{ bm.news.id }}/" title="移除收藏">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+            </a>
+            <div class="meta">
+                {% if bm.news.category %}<span class="cat-chip {{ bm.news.category.slug|default:'tech' }}">{{ bm.news.category.name }}</span>{% endif %}
+            </div>
+            <h4><a href="/detail/{{ bm.news.id }}/" style="color:inherit;">{{ bm.news.title }}</a></h4>
+            <p>{{ bm.news.summary|default:bm.news.content|truncatechars:120 }}</p>
+            <div class="foot">
+                <span>收藏于 {{ bm.created_at|date:"Y-m-d H:i" }}{% if bm.news.ai_confidence %} · AI {{ bm.news.ai_confidence }}%{% endif %}</span>
+                <a class="rm" href="/accounts/bookmarks/toggle/{{ bm.news.id }}/">移除</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state" style="grid-column:1/-1;">
+        <div class="icon">♡</div>
+        <h4>还没有收藏</h4>
+        <p>在新闻详情页点击收藏按钮, 它们会出现在这里。</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div class="pag" style="margin-top:32px;">
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">← 上一页</a>{% endif %}
+    {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}
+        <span class="is-on">{{ num }}</span>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <a href="?page={{ num }}">{{ num }}</a>
+        {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">下一页 →</a>{% endif %}
+</div>
+{% endif %}
+
+</div>
+{% endblock %}

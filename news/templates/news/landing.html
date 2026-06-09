@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}智阅新闻 · 中文新闻智能分类系统{% endblock %}
+
+{% block body_class %}landing-body{% endblock %}
+
+{% block content %}
+<div class="hv">
+    {# 顶端栏统一用全站 site-header(来自 base.html),不在 landing 再造一份 #}
+    {% comment %} keep these for backward-compat; they will not render
+    <nav class="hv-nav">
+        <a class="hv-nav-logo" href="/">
+            <span class="mark">智</span>
+            <span>
+                <b>智阅新闻</b>
+                <small>ZHIYUE · BERT</small>
+            </span>
+        </a>
+        <div class="hv-nav-links">
+            <a href="/">首页</a>
+            <a href="/list/">新闻</a>
+            <a href="/classify/text/">新闻分类</a>
+            <a href="/classify/batch/">批量处理</a>
+            <a href="#features">关于</a>
+        </div>
+        <div class="hv-nav-cta">
+            <a class="login" href="/accounts/login/">登录</a>
+            <a class="signup" href="/accounts/register/">立即使用</a>
+        </div>
+    </nav>
+    {% endcomment %}
+
+    {# ============ HERO ============ #}
+    <section class="hv-hero">
+        <div class="hv-deco">
+            <span class="dot d1"></span>
+            <span class="dot d2"></span>
+            <span class="dot d3"></span>
+            <span class="dot d4"></span>
+            <span class="dot d5"></span>
+            <svg class="squiggle" viewBox="0 0 60 24">
+                <path d="M2 12 Q 10 4, 18 12 T 34 12 T 50 12 T 58 12" stroke="#C8201E" stroke-width="2" fill="none" stroke-linecap="round"/>
+            </svg>
+        </div>
+
+        {# LEFT — headline + CTA #}
+        <div class="hv-hero-left">
+            <div class="hv-eb">
+                <span class="dot"></span>
+                <b>BERT-CNN v2.1</b> 已上线 · 94.7% 准确率
+            </div>
+
+            <h1 class="hv-title">
+                每一条新闻, <br>
+                都先被 <span class="stroke">AI</span> 读过。
+            </h1>
+
+            <p class="hv-sub">
+                基于 BERT 的中文新闻智能分类系统 —— 5 种模型可选, 10 大领域全覆盖, 86ms 内给出可追溯的判别结果。
+            </p>
+
+            <div class="hv-sub-meta">
+                <span><b>5</b> 种模型</span>
+                <i></i>
+                <span><b>10</b> 大领域</span>
+                <i></i>
+                <span><b>86ms</b> 平均耗时</span>
+                <i></i>
+                <span><b>94.7%</b> 准确率</span>
+            </div>
+
+            <div class="hv-cta-row">
+                <a class="hv-cta-primary" href="/accounts/register/">开始智能阅读</a>
+                <a class="hv-cta-ghost" href="/classify/text/">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+                    体验新闻分类
+                </a>
+            </div>
+
+            <div class="hv-trust">
+                <div class="avs">
+                    <span class="r1">张</span>
+                    <span class="r2">王</span>
+                    <span class="r3">李</span>
+                    <span>+</span>
+                </div>
+                <div class="txt">
+                    <b>{{ trust_count|default:"86,000+" }} 读者</b>
+                    <span>已用智阅新闻读懂今天<span class="stars">· ★★★★★ 4.9</span></span>
+                </div>
+            </div>
+        </div>
+
+        {# RIGHT — 单张大报纸 + 浮动色块 + AI 处理徽章 #}
+        <div class="hv-hero-right">
+            <div class="hv-blob"></div>
+
+            <div class="hv-paper-back b1"></div>
+            <div class="hv-paper-back b2"></div>
+
+            {% with lead=hero_lead %}
+            <a class="hv-paper-main" href="{% if lead %}/detail/{{ lead.id }}/{% else %}/list/{% endif %}" style="color:inherit;text-decoration:none;display:block;">
+                <div class="hv-paper-mast">
+                    <span>VOL. 1247</span>
+                    <b>ZHIYUE</b>
+                    <span>{{ lead.publish_time|default:lead.created_at|date:"m.d.Y"|default:"05.18.2026" }}</span>
+                </div>
+                <div class="hv-paper-eb">今日头条</div>
+                <h3 class="hv-paper-h">
+                    {% if lead %}{{ lead.title|truncatechars:40 }}{% else %}国务院召开常务会议<br>部署优化营商<span class="red">环境</span>{% endif %}
+                </h3>
+                {% if lead.image_url %}
+                <img src="/img/?url={{ lead.image_url|urlencode }}" alt="" class="hv-paper-photo" style="width:100%;aspect-ratio:16/9;object-fit:cover;">
+                {% else %}
+                <div class="hv-paper-photo"></div>
+                {% endif %}
+                <div class="hv-paper-body">
+                    <i class="w1"></i>
+                    <i class="w2"></i>
+                    <i class="w3"></i>
+                </div>
+                <div class="hv-paper-ai-strip">
+                    <div>
+                        <span style="font-family:var(--mono);font-size:9.5px;color:var(--ink-4);letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:2px;">分类</span>
+                        <b>{{ lead.category.name|default:"未分类" }}</b>
+                    </div>
+                    <span class="conf">{{ lead.author|default:"新华社" }}</span>
+                </div>
+            </a>
+            {% endwith %}
+
+            {# 浮动分类气泡(只显示分类名,不再带置信度) #}
+            <span class="hv-float f1 sp">体育</span>
+            <span class="hv-float f2 fn">财经</span>
+            <span class="hv-float f3 et">娱乐</span>
+            <span class="hv-float f4">科技</span>
+
+            {# Sparkles #}
+            <svg class="hv-spark s1" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z"/>
+            </svg>
+            <svg class="hv-spark s2" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z"/>
+            </svg>
+            <svg class="hv-spark s3" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z"/>
+            </svg>
+        </div>
+    </section>
+
+    {# ============ FEATURE CARDS ============ #}
+    <section class="hv-features" id="features">
+        <a class="hv-feat" href="/classify/text/" style="color:inherit;text-decoration:none;">
+            <span class="num">01</span>
+            <span class="icon red">分</span>
+            <h4>智能分类</h4>
+            <p>把任何中文新闻文本贴进来, BERT 立即判别到 10 个领域之一, 附带置信度。</p>
+        </a>
+        <a class="hv-feat" href="/classify/text/" style="color:inherit;text-decoration:none;">
+            <span class="num">02</span>
+            <span class="icon navy">模</span>
+            <h4>5 种模型对比</h4>
+            <p>BERT · BERT-CNN · BERT-RNN · TextCNN · FastText, 同一文本横向对照。</p>
+        </a>
+        <a class="hv-feat" href="/accounts/register/" style="color:inherit;text-decoration:none;">
+            <span class="num">03</span>
+            <span class="icon gold">荐</span>
+            <h4>个性化推荐</h4>
+            <p>基于阅读历史, 自动整理早 6 点的「为你定制」简报。</p>
+        </a>
+        <a class="hv-feat" href="/classify/batch/" style="color:inherit;text-decoration:none;">
+            <span class="num">04</span>
+            <span class="icon green">批</span>
+            <h4>批量处理</h4>
+            <p>支持 CSV 批量上传, 一次处理上千条文本, 结果可导出复核。</p>
+        </a>
+    </section>
+
+    {# ============ CONTENT — Today's stories ============ #}
+    <section class="hv-content">
+        <div class="hv-content-head">
+            <span class="badge">最新新闻</span>
+            <h2>编辑精选</h2>
+            <a class="more" href="/list/">查看全部新闻</a>
+        </div>
+
+        <div class="hv-stories">
+            {% if curated_lead %}
+            <a class="hv-story-lead" href="/detail/{{ curated_lead.id }}/" style="color:inherit;text-decoration:none;">
+                <div class="photo" {% if curated_lead.image_url %}style="background:url('/img/?url={{ curated_lead.image_url|urlencode }}') center/cover;"{% endif %}>
+                    <span class="stamp">{% if curated_lead.is_featured %}今日头条{% else %}最新新闻{% endif %}</span>
+                </div>
+                <div class="body">
+                    <h3>{{ curated_lead.title }}</h3>
+                    <p>{{ curated_lead.summary|default:curated_lead.content|truncatechars:160 }}</p>
+                    <div class="met">
+                        <span>{{ curated_lead.author|default:"新华社" }}</span>
+                        <span>{{ curated_lead.publish_time|default:curated_lead.created_at|date:"H:i" }}</span>
+                        <span>{{ curated_lead.view_count|default:0 }} reads</span>
+                    </div>
+                </div>
+            </a>
+            {% else %}
+            <article class="hv-story-lead">
+                <div class="photo">
+                    <span class="stamp">最新新闻</span>
+                </div>
+                <div class="body">
+                    <h3>国务院召开常务会议, 部署优化营商环境十项新举措</h3>
+                    <p>会议听取关于推进高质量发展和促进民营经济发展的工作汇报, 部署进一步优化营商环境、降低中小微企业融资成本的具体措施。</p>
+                    <div class="met">
+                        <span>新华社 · 张文</span>
+                        <span>14:32</span>
+                        <span>12,847 reads</span>
+                    </div>
+                </div>
+            </article>
+            {% endif %}
+
+            <div class="hv-story-side">
+                {% for n in curated_side|slice:":3" %}
+                <a class="hv-story-card" href="/detail/{{ n.id }}/" style="color:inherit;text-decoration:none;">
+                    <div class="photo {% cycle 'fn' 'sp' 'et' %}" {% if n.image_url %}style="background:url('/img/?url={{ n.image_url|urlencode }}') center/cover;"{% endif %}></div>
+                    <div class="body">
+                        <h4>{{ n.title|truncatechars:38 }}</h4>
+                        <div class="met">
+                            <span>{{ n.category.name|default:"未分类" }} · {{ n.publish_time|default:n.created_at|date:"H:i" }}</span>
+                            <span>{{ n.view_count|default:0 }} reads</span>
+                        </div>
+                    </div>
+                </a>
+                {% empty %}
+                <article class="hv-story-card">
+                    <div class="photo fn"></div>
+                    <div class="body">
+                        <h4>沪指收涨 1.32% 报 3,340 点, 北向资金净流入 80 亿</h4>
+                        <div class="met"><span>财经 · 14:30</span></div>
+                    </div>
+                </article>
+                <article class="hv-story-card">
+                    <div class="photo sp"></div>
+                    <div class="body">
+                        <h4>男篮 95-88 战胜对手, 提前锁定世界杯门票</h4>
+                        <div class="met"><span>体育 · 12:18</span></div>
+                    </div>
+                </article>
+                <article class="hv-story-card">
+                    <div class="photo et"></div>
+                    <div class="body">
+                        <h4>国产史诗大片首日全球票房破 1.2 亿美元</h4>
+                        <div class="met"><span>娱乐 · 11:02</span></div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

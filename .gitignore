@@ -1,1 +1,26 @@
-/model/3_transformer_models.py
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 预训练 / 训练产出的模型权重（体积大，不应入库）
+model/bert-base-chinese/
+model/albert_chinese_base/
+model/data/
+model/models/
+model/results/
+models/
+
+# 缓存
+.runtime_cache/
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.idea/
+.vscode/
+
+# 数据
+*.csv
+*.sql

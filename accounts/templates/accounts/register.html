@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}注册 · 智阅新闻{% endblock %}
+
+{% block body_class %}auth-body{% endblock %}
+
+{% block layout %}
+<main class="auth">
+    <section class="auth-form-side">
+        <a href="/accounts/login/" class="auth-back">返回登录</a>
+
+        <div class="auth-mast">
+            <div class="mark">智</div>
+            <div class="name"><b>智阅新闻</b><small>ZHIYUE · BERT</small></div>
+            <div class="issue">{% now "Y.m.d" %}</div>
+        </div>
+
+        <div class="auth-title-block">
+            <div class="auth-eb">加入我们 · JOIN ZHIYUE</div>
+            <h1 class="auth-title">注册新账号</h1>
+            <p class="auth-lead">建立你的智能阅读档案, 让分类系统记住你关心什么。</p>
+        </div>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="auth-msg">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post" class="auth-form" novalidate>
+            {% csrf_token %}
+
+            <div class="auth-field">
+                <label>用户名 / Username</label>
+                <div class="auth-input">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <input type="text" name="username" placeholder="选一个独特的用户名" required autofocus value="{{ request.POST.username|default:'' }}">
+                </div>
+            </div>
+
+            <div class="auth-field">
+                <label>邮箱 / Email</label>
+                <div class="auth-input">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    <input type="email" name="email" placeholder="例如 you@example.com" required value="{{ request.POST.email|default:'' }}">
+                </div>
+            </div>
+
+            <div class="auth-field">
+                <label>密码 / Password</label>
+                <div class="auth-input">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <input type="password" id="pwd-r" name="password" placeholder="至少 8 位, 含字母与数字" required>
+                    <button type="button" class="pwd-toggle" onclick="(function(){var i=document.getElementById('pwd-r');i.type=i.type==='password'?'text':'password';})()">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="auth-field">
+                <label>确认密码 / Confirm</label>
+                <div class="auth-input">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <input type="password" id="pwd-r2" name="confirm_password" placeholder="再次输入密码" required>
+                    <button type="button" class="pwd-toggle" onclick="(function(){var i=document.getElementById('pwd-r2');i.type=i.type==='password'?'text':'password';})()">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="auth-remember">
+                <label><span class="box"></span>我已阅读并同意 <a href="#" style="color:var(--red);border-bottom:1px solid var(--red);margin-left:6px;">服务条款</a> 与 <a href="#" style="color:var(--red);border-bottom:1px solid var(--red);">隐私政策</a></label>
+            </div>
+
+            <div class="auth-submit">
+                <button type="submit" class="auth-submit-btn">注 册</button>
+                <span class="alt">已有账号? <a href="/accounts/login/">立即登录</a></span>
+            </div>
+        </form>
+
+        <div class="auth-foot">
+            <div class="models">
+                <small>POWERED BY</small>
+                <span class="tag">BERT</span><span class="tag">BERT-CNN</span><span class="tag">BERT-RNN</span><span class="tag">TextCNN</span><span class="tag">FastText</span>
+            </div>
+            <div class="copy">© 2026 智阅新闻</div>
+        </div>
+    </section>
+
+    <aside class="auth-brand-side">
+        <div class="auth-brand-top">
+            <div class="auth-brand-eb">EDITORIAL × INTELLIGENCE</div>
+            <h2 class="auth-brand-quote">注册后即可 <span class="em">收藏</span> 你喜欢的新闻与分类偏好。</h2>
+            <div class="auth-brand-byline">主编手记 · 智阅新闻</div>
+        </div>
+
+        <div class="auth-brand-chart">
+            <div class="abc-head">
+                <span class="abc-eb">CATEGORY PREVIEW · 类别预览</span>
+                <span class="abc-meta">注册后将根据阅读自动生成</span>
+            </div>
+            <div class="abc-bars">
+                <div class="abc-row"><span class="lbl">科技</span><span class="bar tech"><i style="--w:78%"></i></span></div>
+                <div class="abc-row"><span class="lbl">财经</span><span class="bar fin"><i style="--w:64%"></i></span></div>
+                <div class="abc-row"><span class="lbl">体育</span><span class="bar sp"><i style="--w:52%"></i></span></div>
+                <div class="abc-row"><span class="lbl">娱乐</span><span class="bar et"><i style="--w:41%"></i></span></div>
+                <div class="abc-row"><span class="lbl">社会</span><span class="bar so"><i style="--w:33%"></i></span></div>
+                <div class="abc-row"><span class="lbl">教育</span><span class="bar edu"><i style="--w:25%"></i></span></div>
+                <div class="abc-row"><span class="lbl">时政</span><span class="bar pol"><i style="--w:18%"></i></span></div>
+            </div>
+        </div>
+
+        <div style="position:relative;z-index:1;">
+            <div class="auth-paper">
+                <div class="auth-paper-mast"><span>YOUR PROFILE</span><b>偏好</b><span>30 天统计</span></div>
+                <div class="auth-paper-eb">分类偏好 · PREFERENCE</div>
+                <h3 class="auth-paper-h">看看过去 30 天, 你读了哪些领域</h3>
+                <p class="auth-paper-body">profile 页会统计你阅读的类别分布 · 收藏总数 · 分类记录次数，一眼看清自己关心什么。</p>
+            </div>
+            <div class="auth-floats">
+                <span class="auth-float" style="top:-20px;right:40px;">科技</span>
+                <span class="auth-float fn" style="top:60px;right:-12px;">财经</span>
+                <span class="auth-float et" style="bottom:60px;left:-12px;">娱乐</span>
+                <span class="auth-float so" style="bottom:-12px;right:80px;">社会</span>
+            </div>
+        </div>
+    </aside>
+</main>
+{% endblock %}

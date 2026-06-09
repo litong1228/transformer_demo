@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}{% if category.pk %}编辑分类{% else %}新建分类{% endif %} · 管理中心{% endblock %}
+
+{% block body_class %}adm-body{% endblock %}
+
+{% block layout %}
+<div class="adm">
+{% include "manage/_sidebar.html" with active="category" %}
+
+<main class="adm-main" style="padding:0;">
+<div style="padding:24px 28px 20px;">
+    <div class="adm-top" style="padding-bottom:0;border-bottom:none;margin-bottom:0;">
+        <div>
+            <div class="crumb">管理中心 / 分类管理 / <b>{% if category.pk %}编辑 {{ category.name }}{% else %}新建分类{% endif %}</b></div>
+            <h1>{% if category.pk %}编辑分类{% else %}新建分类{% endif %} <span class="count">/ {% if category.pk %}#{{ category.slug }}{% endif %}</span></h1>
+        </div>
+        <div class="adm-top-actions">
+            <a class="adm-btn" href="/manage/category/">← 返回列表</a>
+        </div>
+    </div>
+</div>
+
+<form method="post" action="{% if category.pk %}/manage/category/{{ category.pk }}/edit/{% else %}/manage/category/create/{% endif %}">
+{% csrf_token %}
+
+<div style="padding:0 28px 80px;">
+<div class="adm-form-shell">
+    <div class="adm-form">
+        <div class="adm-form-section">
+            <div class="adm-form-section-head"><h3><span class="step">1</span>分类信息</h3></div>
+            <div class="adm-row-2">
+                <div class="adm-field">
+                    <label>中文名称 <span class="req">REQUIRED</span></label>
+                    <div class="adm-input"><input type="text" name="name" required value="{{ category.name|default:'' }}"></div>
+                </div>
+                <div class="adm-field">
+                    <label>英文名 / EN</label>
+                    <div class="adm-input"><input type="text" name="name_en" value="{{ category.name_en|default:'' }}"></div>
+                </div>
+            </div>
+            <div class="adm-row-2">
+                <div class="adm-field">
+                    <label>编码 (slug) <span class="req">REQUIRED</span></label>
+                    <div class="adm-input"><input type="text" name="slug" required value="{{ category.slug|default:'' }}" placeholder="例如: cat_tech"></div>
+                </div>
+                <div class="adm-field">
+                    <label>排序权重</label>
+                    <div class="adm-input"><input type="number" name="order" value="{{ category.order|default:100 }}"></div>
+                </div>
+            </div>
+            <div class="adm-field">
+                <label>描述</label>
+                <div class="adm-input adm-textarea" style="min-height:100px;">
+                    <textarea name="description" rows="4">{{ category.description|default:'' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="adm-form-section">
+            <div class="adm-form-section-head"><h3><span class="step">2</span>视觉</h3></div>
+            <div class="adm-field">
+                <label>主题颜色 <span class="hint">用于分类点、徽章、强调</span></label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;" id="color-picker">
+                    {% for c in available_colors %}
+                    <label style="display:inline-flex;cursor:pointer;">
+                        <input type="radio" name="color" value="{{ c }}" {% if category.color == c %}checked{% endif %} hidden>
+                        <span class="cswatch" data-color="{{ c }}" style="width:40px;height:40px;background:{{ c }};border:3px solid {% if category.color == c %}var(--ink){% else %}transparent{% endif %};outline:1px solid {% if category.color == c %}var(--paper){% else %}transparent{% endif %};outline-offset:-3px;display:inline-block;"></span>
+                    </label>
+                    {% empty %}
+                    {% for c in '#2C5491,#1F7A50,#8B5A1E,#B0367A,#C8201E,#6B4FA8,#C46A1A,#4A6670,#985CC8,#7A6440'|cut:' '|stringformat:'s' %}{% endfor %}
+                    {# fallback list rendered inline #}
+                    <label style="display:inline-flex;cursor:pointer;"><input type="radio" name="color" value="#2C5491" {% if category.color == '#2C5491' %}checked{% endif %} hidden><span style="width:40px;height:40px;background:#2C5491;display:inline-block;"></span></label>
+                    <label style="display:inline-flex;cursor:pointer;"><input type="radio" name="color" value="#1F7A50" {% if category.color == '#1F7A50' %}checked{% endif %} hidden><span style="width:40px;height:40px;background:#1F7A50;display:inline-block;"></span></label>
+                    <label style="display:inline-flex;cursor:pointer;"><input type="radio" name="color" value="#8B5A1E" {% if category.color == '#8B5A1E' %}checked{% endif %} hidden><span style="width:40px;height:40px;background:#8B5A1E;display:inline-block;"></span></label>
+                    <label style="display:inline-flex;cursor:pointer;"><input type="radio" name="color" value="#B0367A" {% if category.color == '#B0367A' %}checked{% endif %} hidden><span style="width:40px;height:40px;background:#B0367A;display:inline-block;"></span></label>
+                    <label style="display:inline-flex;cursor:pointer;"><input type="radio" name="color" value="#C8201E" {% if category.color == '#C8201E' %}checked{% endif %} hidden><span style="width:40px;height:40px;background:#C8201E;display:inline-block;"></span></label>
+                    <label style="display:inline-flex;cursor:pointer;"><input type="radio" name="color" value="#6B4FA8" {% if category.color == '#6B4FA8' %}checked{% endif %} hidden><span style="width:40px;height:40px;background:#6B4FA8;display:inline-block;"></span></label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="adm-form-section">
+            <div class="adm-form-section-head"><h3><span class="step">3</span>父分类</h3></div>
+            <div class="adm-field">
+                <label>父分类</label>
+                <select name="parent" style="width:100%;background:var(--paper);border:1px solid var(--border-2);padding:12px 14px;font-family:var(--serif);font-size:14px;">
+                    <option value="">无 (顶级分类)</option>
+                    {% for c in parent_options %}
+                    <option value="{{ c.id }}" {% if category.parent_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="adm-form-side">
+        {% if category.pk %}
+        <div class="adm-card">
+            <div class="adm-card-head" style="padding-bottom:12px;margin-bottom:14px;">
+                <h3>统计摘要</h3>
+            </div>
+            <div class="cr-meta-grid">
+                <div class="cr-meta-row"><span class="lbl">分类 ID</span><span class="val mono">{{ category.slug }}</span></div>
+                <div class="cr-meta-row"><span class="lbl">总文章数</span><span class="val">{{ category.news_count|default:0 }}</span></div>
+                <div class="cr-meta-row"><span class="lbl">本月新增</span><span class="val">{{ category.month_new|default:0 }}</span></div>
+                <div class="cr-meta-row"><span class="lbl">总阅读量</span><span class="val">{{ category.total_views|default:0 }}</span></div>
+                <div class="cr-meta-row"><span class="lbl">BERT 准确率</span><span class="val" style="color:var(--ai);">{{ category.ai_accuracy|default:"--" }}%</span></div>
+                <div class="cr-meta-row"><span class="lbl">创建时间</span><span class="val mono">{{ category.created_at|date:"Y.m.d" }}</span></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+</div>
+
+<div class="adm-save-bar">
+    <span class="info">{% if category.pk %}该分类下有 <b>{{ category.news_count|default:0 }} 篇文章</b> · 修改将影响列表显示{% else %}新建分类{% endif %}</span>
+    <div class="btn-grp">
+        <a href="/manage/category/" style="display:inline-flex;align-items:center;height:36px;padding:0 16px;color:#fff;text-decoration:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);font-size:13px;font-weight:600;">取消</a>
+        <button type="submit" class="primary">保存更改 →</button>
+    </div>
+</div>
+</form>
+</main>
+</div>
+
+<script>
+document.getElementById('color-picker')?.addEventListener('change', (e) => {
+    document.querySelectorAll('#color-picker .cswatch').forEach(s => {
+        const checked = s.parentElement.querySelector('input').checked;
+        s.style.border = '3px solid ' + (checked ? 'var(--ink)' : 'transparent');
+        s.style.outline = '1px solid ' + (checked ? 'var(--paper)' : 'transparent');
+    });
+});
+</script>
+{% endblock %}

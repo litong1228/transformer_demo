@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}智阅新闻 · 首页{% endblock %}
+
+{% block content %}
+<div class="home">
+<div class="home-body">
+
+    {# kicker(假数据条)已删 #}
+
+    {# ============ 已登录 feed: 不展示营销 hero。营销 hero 在 landing.html 给匿名访客看 ============ #}
+    {% comment %}
+    <div class="hv hv-embed">
+        <section class="hv-hero">
+            <div class="hv-deco">
+                <span class="dot d1"></span><span class="dot d2"></span>
+                <span class="dot d3"></span><span class="dot d4"></span>
+                <span class="dot d5"></span>
+            </div>
+
+            <div class="hv-hero-left">
+                <div class="hv-eb"><span class="dot"></span><b>BERT-CNN v2.1</b> 已上线 · 94.7% 准确率</div>
+                <h1 class="hv-title">每一条新闻,<br>都先被 <span class="stroke">AI</span> 读过。</h1>
+                <p class="hv-sub">基于 BERT 的中文新闻智能分类系统 —— 5 种模型可选, 10 大领域全覆盖, 86ms 内给出可追溯的判别结果。</p>
+                <div class="hv-sub-meta">
+                    <span><b>5</b> 种模型</span><i></i>
+                    <span><b>10</b> 大领域</span><i></i>
+                    <span><b>86ms</b> 平均耗时</span><i></i>
+                    <span><b>94.7%</b> 准确率</span>
+                </div>
+                <div class="hv-cta-row">
+                    <a class="hv-cta-primary" href="/classify/text/">开始智能阅读</a>
+                    <a class="hv-cta-ghost" href="/classify/text/">体验新闻分类</a>
+                </div>
+            </div>
+
+            <div class="hv-hero-right">
+                <div class="hv-blob"></div>
+
+                <div class="hv-deck" id="hv-deck">
+                    {% for h in headlines|slice:":5" %}
+                    {% with cs=h.category.slug|default:'tech' %}
+                    <article class="hv-card" data-idx="{{ forloop.counter0 }}" data-cat="{{ cs }}">
+                        <a href="/detail/{{ h.id }}/" style="color:inherit;text-decoration:none;display:block;">
+                            <div class="hv-paper-mast">
+                                <span>VOL. {{ 1247|add:forloop.counter0|stringformat:"d" }}</span>
+                                <b>ZHIYUE</b>
+                                <span>{{ h.publish_time|default:h.created_at|date:"m.d.Y" }}</span>
+                            </div>
+                            <div class="hv-paper-eb">
+                                头版头条 · LEAD
+                                <span style="margin-left:auto;font-family:var(--mono);font-weight:500;color:var(--ink-4);letter-spacing:0.06em;">{{ forloop.counter }} / {{ headlines|length }}</span>
+                            </div>
+                            <h3 class="hv-paper-h">{{ h.title|truncatechars:36 }}</h3>
+                            {% if h.image_url %}
+                            <img src="/img/?url={{ h.image_url|urlencode }}" alt="" class="hv-paper-photo" style="width:100%;aspect-ratio:16/9;object-fit:cover;">
+                            {% else %}
+                            <div class="hv-paper-photo hv-paper-photo-{{ cs|slice:':4' }}"></div>
+                            {% endif %}
+                            <div class="hv-paper-body">
+                                <i class="w1"></i><i class="w2"></i><i class="w3"></i>
+                            </div>
+                            <div class="hv-paper-meta">
+                                <span class="cat-chip {{ cs }}">{{ h.category.name|default:"今日要闻" }}</span>
+                                <span class="reads">{{ h.author|default:"新华社" }} · {{ h.publish_time|default:h.created_at|date:"H:i" }} · {{ h.view_count|default:0 }} reads</span>
+                            </div>
+                        </a>
+                    </article>
+                    {% endwith %}
+                    {% empty %}
+                    {# fallback: 5 example cards if no headlines #}
+                    {% for x in '12345' %}
+                    <article class="hv-card" data-idx="{{ forloop.counter0 }}" data-cat="{% cycle 'po' 'tech' 'fn' 'sp' 'et' %}">
+                        <div class="hv-paper-mast"><span>VOL. {{ 1247|add:forloop.counter0 }}</span><b>ZHIYUE</b><span>05.{{ 18|add:forloop.counter0 }}.2026</span></div>
+                        <div class="hv-paper-eb">头版头条 · LEAD<span style="margin-left:auto;font-family:var(--mono);color:var(--ink-4);">{{ forloop.counter }} / 5</span></div>
+                        <h3 class="hv-paper-h">{% cycle '国务院召开常务会议' '国产 AI 芯片量产' '沪指收涨 1.32%' '男篮战胜对手' '史诗大片公映' %}</h3>
+                        <div class="hv-paper-photo hv-paper-photo-{% cycle 'red' 'blue' 'warm' 'green' 'red' %}"></div>
+                        <div class="hv-paper-body"><i class="w1"></i><i class="w2"></i><i class="w3"></i></div>
+                        <div class="hv-paper-meta"><span class="cat-chip {% cycle 'politics' 'tech' 'finance' 'sports' 'ent' %}">{% cycle '时政' '科技' '财经' '体育' '娱乐' %}</span><span class="reads">新华社 · 14:32 · 12,847 reads</span></div>
+                    </article>
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+
+                <!-- AI 处理徽章 已移除 — 轮播只展示新闻 -->
+
+                <!-- 控件 -->
+                <div class="hv-deck-controls">
+                    <button type="button" class="hv-arrow" id="hv-prev" aria-label="上一条">←</button>
+                    <div class="hv-dots" id="hv-dots"></div>
+                    <button type="button" class="hv-arrow" id="hv-next" aria-label="下一条">→</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    (function() {
+        const deck = document.getElementById('hv-deck');
+        if (!deck) return;
+        const cards = Array.from(deck.querySelectorAll('.hv-card'));
+        if (!cards.length) return;
+        const total = cards.length;
+        let active = 0;
+
+        const dotsEl = document.getElementById('hv-dots');
+        const catNames = {po:'时政',tech:'科技',fn:'财经',sp:'体育',et:'娱乐',so:'社会',he:'健康',ed:'教育',pr:'房产',g:'游戏'};
+        cards.forEach((c, i) => {
+            const dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = 'hv-dot';
+            dot.innerHTML = '<span class="hv-dot-cat">' + (catNames[c.dataset.cat] || c.dataset.cat) + '</span>';
+            dot.addEventListener('click', () => setActive(i));
+            dotsEl.appendChild(dot);
+        });
+
+        function setActive(idx) {
+            active = ((idx % total) + total) % total;
+            cards.forEach((c, i) => {
+                let pos = i - active;
+                if (pos < -2) pos += total;
+                if (pos > 2) pos -= total;
+                c.className = 'hv-card hv-card-pos-' + pos + (pos === 0 ? ' is-front' : '');
+                c.dataset.idx = i;
+            });
+            dotsEl.querySelectorAll('.hv-dot').forEach((d, i) => {
+                d.className = 'hv-dot' + (i === active ? ' is-on' : '');
+            });
+        }
+
+        document.getElementById('hv-prev').addEventListener('click', () => setActive(active - 1));
+        document.getElementById('hv-next').addEventListener('click', () => setActive(active + 1));
+        setActive(0);
+
+        // Auto-rotate every 6s, pause on hover
+        let timer = setInterval(() => setActive(active + 1), 6000);
+        deck.addEventListener('mouseenter', () => clearInterval(timer));
+        deck.addEventListener('mouseleave', () => { timer = setInterval(() => setActive(active + 1), 6000); });
+    })();
+    </script>
+
+    <style>
+    .home .hv-embed { margin: 32px 0 80px; }
+    .home .hv-hero { padding: 0; min-height: 540px; }
+    .home .hv-deck-controls { bottom: -56px; }
+    </style>
+    {% endcomment %}
+
+    <!-- 头条 + 排行 -->
+    <style>
+        .home-hero { grid-template-columns: 2fr 1fr !important; }
+        .home-hero-lead h1 { font-size: 38px !important; line-height: 1.15 !important; }
+        .home-hero-lead .lead { font-size: 16px !important; max-width: none !important; }
+        .home-hero-lead .lead-drop { font-size: 42px !important; }
+    </style>
+    <div class="home-hero">
+        {% if headlines %}
+        {% with lead=headlines.0 %}
+        <div class="home-hero-lead">
+            <div class="eyebrow">
+                今日头条
+                {% if lead.ai_category %}
+                <span class="ai-chip"><span class="dot"></span>AI {{ lead.ai_category }} · {{ lead.ai_confidence|default:"99.4" }}%</span>
+                {% endif %}
+            </div>
+            <h1><a href="/detail/{{ lead.id }}/" style="color:inherit;">{{ lead.title }}</a></h1>
+            <p class="lead">
+                <span class="lead-drop">{{ lead.summary|default:lead.content|slice:":1" }}</span>{{ lead.summary|default:lead.content|truncatechars:160|slice:"1:" }}
+            </p>
+            {% if lead.image_url %}
+            <a href="/detail/{{ lead.id }}/">
+                <img class="photo" src="/img/?url={{ lead.image_url|urlencode }}" alt="{{ lead.title }}" style="width:100%;aspect-ratio:21/9;object-fit:cover;max-height:340px;">
+            </a>
+            {% else %}
+            <div class="photo ph is-photo-red" style="aspect-ratio:21/9;max-height:340px;"></div>
+            {% endif %}
+            <div class="byline">
+                <span>{{ lead.author|default:"新华社" }} · {{ lead.publish_time|default:lead.created_at|date:"Y.m.d H:i" }}</span>
+                <span class="reads">{{ lead.view_count|default:0 }} reads</span>
+            </div>
+        </div>
+        {% endwith %}
+        {% endif %}
+
+        <div class="home-hero-side">
+            <div class="side-title">
+                热门新闻
+                <span class="live">实时</span>
+            </div>
+            {% for news in trending_news|slice:":4" %}
+            <div class="side-item {% if forloop.first %}is-top{% endif %}">
+                <div class="num">{{ forloop.counter|stringformat:"02d" }}</div>
+                <div>
+                    <div class="ttl"><a href="/detail/{{ news.id }}/" style="color:inherit;">{{ news.title }}</a></div>
+                    <div class="met">
+                        {% if news.category %}<span class="cat-chip {{ news.category.slug|default:'tech' }}">{{ news.category.name }}</span>{% endif %}
+                        <span>{{ news.publish_time|default:news.created_at|date:"H:i" }}</span>
+                        <span>{{ news.view_count|default:0 }}</span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="side-item is-top">
+                <div class="num">01</div>
+                <div><div class="ttl">暂无热门新闻</div><div class="met"><span>—</span></div></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- AI 一栏 -->
+    <div class="home-ai-row" style="grid-template-columns: 1.3fr 1fr;">
+        <a href="/classify/text/" class="home-ai-card" style="display:flex;flex-direction:column;color:#fff;text-decoration:none;">
+            <div class="ai-eyebrow"><span class="dot"></span>智能分类系统</div>
+            <h3>把任何中文文本, 在 86ms 内分类到 10 个新闻领域</h3>
+            <p>五种深度学习模型, 可对比、可批量、可追溯。</p>
+            <div class="model-chips">
+                <span class="mchip mchip-star">
+                    <span class="mchip-head"><b>BERT-CNN</b><em>★ 推荐</em></span>
+                    <small>编码 + 多尺度卷积 · 94.7%</small>
+                </span>
+                <span class="mchip">
+                    <span class="mchip-head"><b>BERT</b></span>
+                    <small>Transformer 编码</small>
+                </span>
+                <span class="mchip">
+                    <span class="mchip-head"><b>BERT-TextRNN</b></span>
+                    <small>双向上下文</small>
+                </span>
+                <span class="mchip">
+                    <span class="mchip-head"><b>TextCNN</b></span>
+                    <small>轻量快速</small>
+                </span>
+                <span class="mchip">
+                    <span class="mchip-head"><b>TextRNN</b></span>
+                    <small>序列建模</small>
+                </span>
+            </div>
+            <div class="stats">
+                <div><b>94.7%</b><small>BERT 准确率</small></div>
+                <div><b>86ms</b><small>平均耗时</small></div>
+                <div><b>5</b><small>可用模型</small></div>
+            </div>
+            <span class="cta" style="align-self:flex-start;">立即体验智能分类 →</span>
+        </a>
+
+        <div class="home-stat-card">
+            <div class="hs-head">
+                <div class="eb">今日类别分布</div>
+                <h4>哪些主题在被阅读?</h4>
+                <div class="sub">10 个领域 · 共 <b>{{ total_reads_today|default:0 }}</b> 篇</div>
+            </div>
+            <div class="breakdown-list">
+                {% for cat in category_breakdown %}
+                <div class="breakdown-row {{ cat.slug }}">
+                    <span class="rank">{{ forloop.counter|stringformat:"02d" }}</span>
+                    <span class="lbl">{{ cat.name }}</span>
+                    <span class="bar"><i style="width:{{ cat.percent }}%"></i></span>
+                    <span class="num">{{ cat.percent }}%</span>
+                </div>
+                {% empty %}
+                <div class="breakdown-row tech"><span class="rank">01</span><span class="lbl">科技</span><span class="bar"><i style="width:84%"></i></span><span class="num">28%</span></div>
+                <div class="breakdown-row finance"><span class="rank">02</span><span class="lbl">财经</span><span class="bar"><i style="width:66%"></i></span><span class="num">22%</span></div>
+                <div class="breakdown-row politics"><span class="rank">03</span><span class="lbl">时政</span><span class="bar"><i style="width:54%"></i></span><span class="num">18%</span></div>
+                <div class="breakdown-row sports"><span class="rank">04</span><span class="lbl">体育</span><span class="bar"><i style="width:42%"></i></span><span class="num">14%</span></div>
+                <div class="breakdown-row ent"><span class="rank">05</span><span class="lbl">娱乐</span><span class="bar"><i style="width:30%"></i></span><span class="num">10%</span></div>
+                <div class="breakdown-row society"><span class="rank">06</span><span class="lbl">社会</span><span class="bar"><i style="width:24%"></i></span><span class="num">8%</span></div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 最新新闻 -->
+    <div class="home-section">
+        <div class="home-section-head">
+            <h2>最新新闻</h2>
+            <span class="rule"></span>
+            <a href="/list/" class="more">查看全部</a>
+        </div>
+        <div class="home-card-grid">
+            {% for news in latest_news|slice:":3" %}
+            <a href="/detail/{{ news.id }}/" class="home-card" style="color:inherit;display:block;">
+                {% if news.image_url %}
+                <img src="/img/?url={{ news.image_url|urlencode }}" alt="{{ news.title }}" style="width:100%;aspect-ratio:16/9;object-fit:cover;margin-bottom:16px;">
+                {% else %}
+                <div class="ph is-photo-blue" style="aspect-ratio:16/9;margin-bottom:16px;"></div>
+                {% endif %}
+                <div class="meta">
+                    {% if news.category %}<span class="cat-chip {{ news.category.slug|default:'tech' }}">{{ news.category.name }}</span>{% endif %}
+                    <span style="font-family:var(--mono);font-size:11px;color:var(--ink-4);">{{ news.publish_time|default:news.created_at|date:"H:i" }}</span>
+                </div>
+                <h3>{{ news.title }}</h3>
+                <p>{{ news.summary|default:news.content|truncatechars:120 }}</p>
+                <div class="footer">
+                    <span>{{ news.view_count|default:0 }} reads</span>
+                    {% if news.ai_confidence %}<span class="ai-mini">AI {{ news.ai_confidence }}%</span>{% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 分类专区 -->
+    {% for section in category_sections %}
+    <div class="home-section">
+        <div class="home-section-head">
+            <h2>{{ section.category.name }}</h2>
+            <span class="rule"></span>
+            <a href="/list/{{ section.category.id }}/" class="more">查看更多</a>
+        </div>
+        <div class="home-card-grid">
+            {% for news in section.items|slice:":3" %}
+            <a href="/detail/{{ news.id }}/" class="home-card" style="color:inherit;display:block;">
+                {% if news.image_url %}
+                <img src="/img/?url={{ news.image_url|urlencode }}" alt="{{ news.title }}" style="width:100%;aspect-ratio:16/9;object-fit:cover;margin-bottom:16px;">
+                {% else %}
+                <div class="ph is-photo-warm" style="aspect-ratio:16/9;margin-bottom:16px;"></div>
+                {% endif %}
+                <div class="meta">
+                    <span class="cat-chip {{ section.category.slug|default:'tech' }}">{{ section.category.name }}</span>
+                    <span style="font-family:var(--mono);font-size:11px;color:var(--ink-4);">{{ news.publish_time|default:news.created_at|date:"m/d" }}</span>
+                </div>
+                <h3>{{ news.title }}</h3>
+                <p>{{ news.summary|default:news.content|truncatechars:120 }}</p>
+                <div class="footer">
+                    <span>{{ news.view_count|default:0 }} reads</span>
+                    {% if news.ai_confidence %}<span class="ai-mini">AI {{ news.ai_confidence }}%</span>{% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+</div>
+{% endblock %}

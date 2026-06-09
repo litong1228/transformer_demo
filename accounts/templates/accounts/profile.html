@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}个人中心 · 智阅新闻{% endblock %}
+
+{% block content %}
+<div class="page-body">
+
+<div class="page-crumb">智阅新闻 / 个人中心 / <b>{{ user.username }}</b></div>
+
+<div class="up-hero">
+    <div class="up-avatar">
+        {% if user.profile.avatar %}<img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" style="width:100%;height:100%;object-fit:cover;">{% else %}{{ user.username|slice:':1'|upper }}{% endif %}
+    </div>
+    <div class="up-meta">
+        <div class="eb">{{ user.profile.tier|default:"PREMIUM READER" }} · 注册第 {{ days_registered|default:1 }} 天</div>
+        <h1>你好, {{ user.profile.display_name|default:user.username }}</h1>
+        <div class="info">
+            <span>{{ user.email }}</span>
+            <i></i>
+            <span>累计阅读 <b>{{ stats.read_count|default:0 }}</b> 篇</span>
+            <i></i>
+            <span>收藏 <b>{{ stats.bookmark_count|default:0 }}</b> 篇</span>
+            <i></i>
+            <span>分类记录 <b>{{ stats.classify_count|default:0 }}</b> 次</span>
+        </div>
+    </div>
+    <div class="up-actions">
+        <a class="btn" href="#bookmarks">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+            我的收藏
+        </a>
+        <button type="button" class="btn primary" id="pf-edit-open" style="border:none;cursor:pointer;font:inherit;">编辑资料</button>
+        <a class="btn" href="/accounts/logout/" style="color:var(--red);border-color:var(--red);">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            退出登录
+        </a>
+    </div>
+</div>
+
+<div class="up-stats">
+    <div class="stat-tile">
+        <span class="lbl">本月阅读</span>
+        <b>{{ stats.month_reads|default:0 }}</b>
+        <span class="delta">较上月 {{ stats.month_reads_delta|default:"+0%" }}</span>
+    </div>
+    <div class="stat-tile">
+        <span class="lbl">连续阅读</span>
+        <b>{{ stats.streak|default:0 }} 天</b>
+        <span class="delta">个人记录 {{ stats.streak_best|default:0 }} 天</span>
+    </div>
+    <div class="stat-tile is-ai">
+        <span class="lbl">新闻分类次数</span>
+        <b>{{ stats.classify_count|default:0 }}</b>
+        <span class="delta">本月 {{ stats.classify_month_delta|default:"+0" }}</span>
+    </div>
+    <div class="stat-tile is-red">
+        <span class="lbl">收藏总数</span>
+        <b>{{ stats.bookmark_count|default:0 }}</b>
+        <span class="delta">较上月 {{ stats.bookmark_delta|default:"+0" }}</span>
+    </div>
+</div>
+
+{# ============ 近 7 天阅读趋势 ============ #}
+<div class="data-card" id="trend-card" style="margin-bottom:24px;">
+    <div class="data-card-head">
+        <h3>近 7 天阅读趋势</h3>
+        <span class="tag" id="trend-sum">— 篇</span>
+    </div>
+    <div style="padding:6px 0 4px;">
+        <svg id="trend-chart" viewBox="0 0 700 200" preserveAspectRatio="none" style="width:100%;height:200px;display:block;overflow:visible;">
+            <defs>
+                <linearGradient id="trend-fill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="var(--red)" stop-opacity="0.22"/>
+                    <stop offset="100%" stop-color="var(--red)" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            {# JS 会填充 path / circle / labels #}
+        </svg>
+        <div id="trend-xaxis" style="display:grid;grid-template-columns:repeat(7,1fr);font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:0.04em;text-align:center;margin-top:8px;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+        <div style="text-align:center;border-right:1px solid var(--border);">
+            <b id="trend-total" style="display:block;font-family:var(--serif);font-weight:800;font-size:20px;color:var(--ink);line-height:1;">0</b>
+            <small style="display:block;font-family:var(--mono);font-size:10px;color:var(--ink-4);letter-spacing:0.06em;margin-top:5px;">7 天总计</small>
+        </div>
+        <div style="text-align:center;border-right:1px solid var(--border);">
+            <b id="trend-avg" style="display:block;font-family:var(--serif);font-weight:800;font-size:20px;color:var(--ink);line-height:1;">0</b>
+            <small style="display:block;font-family:var(--mono);font-size:10px;color:var(--ink-4);letter-spacing:0.06em;margin-top:5px;">日均</small>
+        </div>
+        <div style="text-align:center;">
+            <b id="trend-peak" style="display:block;font-family:var(--serif);font-weight:800;font-size:20px;color:var(--red);line-height:1;">0</b>
+            <small style="display:block;font-family:var(--mono);font-size:10px;color:var(--ink-4);letter-spacing:0.06em;margin-top:5px;">峰值</small>
+        </div>
+    </div>
+</div>
+
+{{ daily_reads|json_script:"trend-data" }}
+<script>
+(function(){
+    const data = JSON.parse(document.getElementById('trend-data').textContent || '[]');
+    if (!data.length) return;
+
+    const W = 700, H = 200, PAD_X = 24, PAD_Y = 18;
+    const innerW = W - PAD_X*2, innerH = H - PAD_Y*2;
+    const n = data.length;
+    const counts = data.map(d => d.count);
+    const max = Math.max(1, ...counts);
+
+    const xs = data.map((_, i) => PAD_X + (n === 1 ? innerW/2 : (i / (n-1)) * innerW));
+    const ys = counts.map(c => PAD_Y + (1 - c/max) * innerH);
+
+    // 平滑线条:用 catmull-rom 简化版
+    let line = `M ${xs[0]} ${ys[0]}`;
+    for (let i = 1; i < n; i++) {
+        const x1 = xs[i-1], y1 = ys[i-1], x2 = xs[i], y2 = ys[i];
+        const cx = (x1 + x2) / 2;
+        line += ` C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`;
+    }
+    const area = line + ` L ${xs[n-1]} ${H - PAD_Y} L ${xs[0]} ${H - PAD_Y} Z`;
+
+    const svg = document.getElementById('trend-chart');
+    // 网格横线(3 条)
+    let grid = '';
+    for (let g = 0; g <= 3; g++) {
+        const y = PAD_Y + (g/3) * innerH;
+        grid += `<line x1="${PAD_X}" x2="${W - PAD_X}" y1="${y}" y2="${y}" stroke="var(--border-2)" stroke-width="1" stroke-dasharray="2,3"/>`;
+    }
+    // 面积 + 主线
+    svg.innerHTML += grid
+        + `<path d="${area}" fill="url(#trend-fill)" />`
+        + `<path d="${line}" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`;
+
+    // 数据点
+    for (let i = 0; i < n; i++) {
+        svg.innerHTML += `<circle cx="${xs[i]}" cy="${ys[i]}" r="4" fill="#fff" stroke="var(--red)" stroke-width="2"/>`;
+        if (counts[i] > 0) {
+            svg.innerHTML += `<text x="${xs[i]}" y="${ys[i] - 10}" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ink-2)" font-weight="700">${counts[i]}</text>`;
+        }
+    }
+
+    // X 轴标签
+    const xaxis = document.getElementById('trend-xaxis');
+    xaxis.innerHTML = data.map(d => `<span>${d.label}</span>`).join('');
+
+    // 汇总
+    const total = counts.reduce((a,b)=>a+b, 0);
+    const avg = (total / n).toFixed(1).replace(/\.0$/, '');
+    const peak = max;
+    document.getElementById('trend-sum').textContent = `${total} 篇 · 日均 ${avg}`;
+    document.getElementById('trend-total').textContent = total;
+    document.getElementById('trend-avg').textContent = avg;
+    document.getElementById('trend-peak').textContent = peak;
+})();
+</script>
+
+<div class="up-body">
+    <div class="up-col">
+        <div class="data-card">
+            <div class="data-card-head">
+                <h3>阅读领域分布</h3>
+                <span class="tag">过去 30 天 · {{ stats.month_reads|default:0 }} 篇</span>
+            </div>
+            <div class="up-breakdown">
+                {% for cat in reading_breakdown %}
+                <div class="up-br-row {{ cat.slug }}">
+                    <span class="l">{{ cat.name }}</span>
+                    <span class="bar"><i style="width:{{ cat.percent }}%"></i></span>
+                    <span class="v">{{ cat.count }} 篇 · {{ cat.percent }}%</span>
+                </div>
+                {% empty %}
+                <p style="color:var(--ink-3);font-size:13px;padding:24px 0;text-align:center;">暂无阅读记录, 去 <a href="/" style="color:var(--red);">首页</a> 看看?</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="data-card" id="recent">
+            <div class="data-card-head">
+                <h3>最近阅读</h3>
+                <span class="tag">最近 10 条</span>
+            </div>
+            <div class="up-recent">
+                {% for h in reading_history|slice:":5" %}
+                <a href="/detail/{{ h.news.id }}/" class="row" style="color:inherit;">
+                    {% if h.news.image_url %}
+                    <img class="ph" src="/img/?url={{ h.news.image_url|urlencode }}" alt="{{ h.news.title }}" style="width:60px;aspect-ratio:4/3;object-fit:cover;">
+                    {% else %}
+                    <div class="ph is-photo-blue"></div>
+                    {% endif %}
+                    <div class="body">
+                        <h4>{{ h.news.title }}</h4>
+                        <div class="met">
+                            {% if h.news.category %}<span class="cat-chip {{ h.news.category.slug|default:'tech' }}">{{ h.news.category.name }}</span>{% endif %}
+                            <span>{{ h.read_at|timesince }}前</span>
+                            {% if h.news.ai_confidence %}<span class="ai">AI {{ h.news.ai_confidence }}%</span>{% endif %}
+                        </div>
+                    </div>
+                    <span class="time">{{ h.read_at|date:"H:i" }}</span>
+                </a>
+                {% empty %}
+                <div style="padding:24px;text-align:center;color:var(--ink-3);font-size:13px;">还没有阅读记录</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="up-col">
+        <div class="data-card" id="bookmarks">
+            <div class="data-card-head">
+                <h3>我的收藏</h3>
+                <span class="tag">{{ bookmark_total }} 篇</span>
+            </div>
+            <div style="display:flex;flex-direction:column;">
+                {% for bm in bookmarks %}
+                <a href="/detail/{{ bm.news.id }}/" style="display:grid;grid-template-columns:60px 1fr auto;gap:12px;padding:12px 0;border-bottom:1px dotted var(--border-2);align-items:center;color:inherit;">
+                    {% if bm.news.image_url %}
+                    <img src="/img/?url={{ bm.news.image_url|urlencode }}" alt="" style="width:60px;height:45px;object-fit:cover;">
+                    {% else %}
+                    <div style="width:60px;height:45px;background:var(--paper-2);"></div>
+                    {% endif %}
+                    <div>
+                        <div style="font-family:var(--serif);font-weight:600;font-size:13.5px;color:var(--ink);line-height:1.4;">{{ bm.news.title|truncatechars:42 }}</div>
+                        <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);margin-top:4px;">{{ bm.news.category.name|default:"未分类" }} · {{ bm.created_at|date:"m-d" }}</div>
+                    </div>
+                    <span data-bookmark-id="{{ bm.news.id }}" class="bookmarked is-on" title="移除收藏" style="cursor:pointer;color:var(--red);font-size:14px;">★</span>
+                </a>
+                {% empty %}
+                <p style="color:var(--ink-3);font-size:13px;padding:24px 0;text-align:center;">暂无收藏, <a href="/" style="color:var(--red);">去看看</a> 感兴趣的新闻?</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="up-ai-summary">
+            <div class="eb">新闻分类概览</div>
+            <h3>{{ stats.top_model|default:"BERT-CNN" }} 已为你分类 {{ stats.classify_count|default:0 }} 次</h3>
+            <div class="nums">
+                <div class="n"><b>{{ stats.classify_count|default:0 }}</b><small>总分类</small></div>
+                <div class="n"><b>{{ stats.avg_confidence|default:"—" }}</b><small>平均置信</small></div>
+                <div class="n"><b>{{ stats.top_model|default:"—" }}</b><small>最常用模型</small></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+{# ============ 编辑资料弹窗 ============ #}
+<div id="pf-edit-modal" style="display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;">
+    <div id="pf-edit-bg" style="position:absolute;inset:0;background:rgba(20,14,4,0.55);"></div>
+    <div style="position:relative;width:min(92vw,560px);max-height:90vh;background:var(--paper);border:1px solid var(--ink);box-shadow:0 30px 80px rgba(20,14,4,0.3);display:flex;flex-direction:column;">
+
+        <header style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;background:var(--ink);color:var(--paper);">
+            <h3 style="font-family:var(--serif);font-weight:700;font-size:17px;margin:0;color:var(--paper);">编辑资料</h3>
+            <button type="button" id="pf-edit-close" aria-label="关闭" style="background:none;border:none;color:var(--paper);font-size:22px;cursor:pointer;line-height:1;">×</button>
+        </header>
+
+        <div style="padding:22px 26px 24px;overflow:auto;flex:1;">
+
+            {# ===== Section 1: 头像 ===== #}
+            <div style="margin-bottom:22px;">
+                <div style="font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.12em;color:var(--red);text-transform:uppercase;margin-bottom:12px;">头像 · AVATAR</div>
+                <div style="display:flex;align-items:center;gap:18px;margin-bottom:14px;">
+                    <div style="width:64px;height:64px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:26px;overflow:hidden;flex-shrink:0;">
+                        {% if user.profile.avatar %}<img src="{{ user.profile.avatar.url }}" alt="" style="width:100%;height:100%;object-fit:cover;">{% else %}{{ user.username|slice:':1'|upper }}{% endif %}
+                    </div>
+                    <div style="min-width:0;">
+                        <div style="font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink);margin-bottom:4px;">{{ user.username }}</div>
+                        <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:0.04em;">JPG / PNG / WEBP / GIF · 最大 3 MB</div>
+                    </div>
+                </div>
+                <form method="post" action="/accounts/avatar/upload/" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:center;">
+                    {% csrf_token %}
+                    <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" required style="flex:1;font-family:var(--mono);font-size:12.5px;color:var(--ink-2);">
+                    <button type="submit" style="height:36px;padding:0 18px;background:var(--ink);color:#fff;border:none;cursor:pointer;font-family:var(--serif);font-weight:600;font-size:12.5px;">上传</button>
+                    {% if user.profile.avatar %}
+                    <button type="button" id="pf-avatar-reset" style="height:36px;padding:0 14px;background:var(--surface);color:var(--ink-2);border:1px solid var(--border-2);cursor:pointer;font-family:var(--serif);font-size:12.5px;">恢复默认</button>
+                    {% endif %}
+                </form>
+                {% if user.profile.avatar %}
+                <form method="post" action="/accounts/avatar/delete/" id="pf-avatar-delete-form" style="display:none;">{% csrf_token %}</form>
+                {% endif %}
+            </div>
+
+            <div style="height:1px;background:var(--border);margin:0 0 22px;"></div>
+
+            {# ===== Section 2: 个人信息 ===== #}
+            <div style="margin-bottom:22px;">
+                <div style="font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.12em;color:var(--red);text-transform:uppercase;margin-bottom:12px;">个人信息 · INFO</div>
+                <form method="post" action="/accounts/profile/">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_email">
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                        <div>
+                            <label style="display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;color:var(--ink-4);text-transform:uppercase;margin-bottom:6px;">用户名</label>
+                            <input type="text" value="{{ user.username }}" disabled style="width:100%;height:38px;padding:0 12px;border:1px solid var(--border-2);font-family:var(--mono);font-size:13px;background:var(--paper-2);color:var(--ink-3);box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;color:var(--ink-4);text-transform:uppercase;margin-bottom:6px;">邮箱</label>
+                            <input type="email" name="email" value="{{ user.email }}" required style="width:100%;height:38px;padding:0 12px;border:1px solid var(--border-2);font-family:var(--mono);font-size:13px;background:var(--surface);color:var(--ink);box-sizing:border-box;">
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;">
+                        <button type="submit" style="height:36px;padding:0 22px;background:var(--ink);color:#fff;border:none;cursor:pointer;font-family:var(--serif);font-weight:700;font-size:12.5px;">保存信息</button>
+                    </div>
+                </form>
+            </div>
+
+            <div style="height:1px;background:var(--border);margin:0 0 22px;"></div>
+
+            {# ===== Section 3: 修改密码 ===== #}
+            <div>
+                <div style="font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.12em;color:var(--red);text-transform:uppercase;margin-bottom:12px;">修改密码 · PASSWORD</div>
+                <form method="post" action="/accounts/password/change/">
+                    {% csrf_token %}
+
+                    {% if password_form and password_form.errors %}
+                    <div style="margin-bottom:14px;padding:10px 14px;background:#fdecea;border-left:3px solid #c0241d;font-family:var(--sans);font-size:12.5px;color:#7a1614;line-height:1.55;">
+                        {% for field, errors in password_form.errors.items %}{% for e in errors %}{{ e }}<br>{% endfor %}{% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div style="margin-bottom:12px;">
+                        <label style="display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;color:var(--ink-4);text-transform:uppercase;margin-bottom:6px;">当前密码</label>
+                        <input type="password" name="old_password" autocomplete="current-password" required style="width:100%;height:38px;padding:0 12px;border:1px solid var(--border-2);font-family:var(--mono);font-size:13px;background:var(--surface);color:var(--ink);box-sizing:border-box;">
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+                        <div>
+                            <label style="display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;color:var(--ink-4);text-transform:uppercase;margin-bottom:6px;">新密码</label>
+                            <input type="password" name="new_password1" autocomplete="new-password" required minlength="8" style="width:100%;height:38px;padding:0 12px;border:1px solid var(--border-2);font-family:var(--mono);font-size:13px;background:var(--surface);color:var(--ink);box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;color:var(--ink-4);text-transform:uppercase;margin-bottom:6px;">确认新密码</label>
+                            <input type="password" name="new_password2" autocomplete="new-password" required minlength="8" style="width:100%;height:38px;padding:0 12px;border:1px solid var(--border-2);font-family:var(--mono);font-size:13px;background:var(--surface);color:var(--ink);box-sizing:border-box;">
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;gap:10px;">
+                        <button type="submit" style="height:36px;padding:0 22px;background:var(--ink);color:#fff;border:none;cursor:pointer;font-family:var(--serif);font-weight:700;font-size:12.5px;">更新密码</button>
+                    </div>
+                </form>
+            </div>
+
+            <div style="height:1px;background:var(--border);margin:22px 0;"></div>
+
+            {# ===== Section 4: 账号 ===== #}
+            <div>
+                <div style="font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.12em;color:var(--red);text-transform:uppercase;margin-bottom:12px;">账号 · ACCOUNT</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;background:var(--paper-2);border:1px solid var(--border-2);">
+                    <div style="min-width:0;">
+                        <div style="font-family:var(--serif);font-weight:700;font-size:14px;color:var(--ink);margin-bottom:2px;">{{ user.username }}</div>
+                        <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:0.04em;">{% if user.is_superuser %}SUPER ADMIN{% elif user.is_staff %}STAFF{% else %}READER{% endif %} · 已登录</div>
+                    </div>
+                    <a href="/accounts/logout/" style="height:34px;padding:0 16px;background:var(--red);color:#fff;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:var(--serif);font-weight:600;font-size:12.5px;flex-shrink:0;">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                        退出登录
+                    </a>
+                </div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
+                <button type="button" class="pf-cancel" style="height:36px;padding:0 22px;background:var(--surface);color:var(--ink);border:1px solid var(--border-2);cursor:pointer;font-family:var(--serif);font-weight:600;font-size:12.5px;">关闭</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    const modal = document.getElementById('pf-edit-modal');
+    const bg    = document.getElementById('pf-edit-bg');
+    const open  = document.getElementById('pf-edit-open');
+    const close = document.getElementById('pf-edit-close');
+    const cancels = document.querySelectorAll('.pf-cancel');
+
+    function show() { modal.style.display = 'flex'; }
+    function hide() { modal.style.display = 'none'; }
+
+    open.addEventListener('click', show);
+    close.addEventListener('click', hide);
+    bg.addEventListener('click', hide);
+    cancels.forEach(b => b.addEventListener('click', hide));
+    document.querySelectorAll('[data-pf-open]').forEach(a => {
+        a.addEventListener('click', (e) => { e.preventDefault(); show(); });
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display !== 'none') hide();
+    });
+
+    // 恢复默认头像:复用隐藏的 delete form
+    const resetBtn = document.getElementById('pf-avatar-reset');
+    const resetForm = document.getElementById('pf-avatar-delete-form');
+    if (resetBtn && resetForm) {
+        resetBtn.addEventListener('click', () => {
+            if (confirm('确认恢复为默认头像?')) resetForm.submit();
+        });
+    }
+
+    {% if password_form_open %}show();{% endif %}
+})();
+</script>
+{% endblock %}
