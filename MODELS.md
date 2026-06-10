@@ -27,7 +27,7 @@ models/
 
 ## 备份仓库
 
-- HuggingFace 仓库:`litong1228/transformer_demo_models`（如有变动，同时改 `download_models.py` 和 `upload_models.py` 里的 `HF_REPO`）
+- HuggingFace 仓库:`tong10035/transformer_demo_models`（如有变动，同时改 `download_models.py` 和 `upload_models.py` 里的 `HF_REPO`）
 
 ## 重新备份(训练出新模型后)
 

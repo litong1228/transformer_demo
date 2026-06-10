@@ -1,14 +1,30 @@
+# ===== Web 框架(Django 站点)=====
+Django==4.2.10
+djangorestframework
+django-simpleui
+mysqlclient            # MySQL 驱动;装不上可改用 PyMySQL,见 README
+
+# ===== 模型推理 / 训练 =====
 torch
 transformers
 scikit-learn
+joblib
+jieba
+datasets
+huggingface_hub
+
+# ===== 数据处理 / 可视化 =====
 pandas
 numpy
+scipy                  # plot.py 训练曲线平滑
 matplotlib
 seaborn
+
+# ===== 数据采集(spider.py)=====
+requests
+
+# ===== 其它(可选)=====
 streamlit
 fastapi
 uvicorn
 pydantic
-jieba
-datasets
-huggingface_hub

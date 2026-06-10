@@ -13,7 +13,7 @@ import os
 from huggingface_hub import snapshot_download
 
 # ============ 改成你自己的 HF 仓库 ============
-HF_REPO = os.environ.get("HF_MODELS_REPO", "litong1228/transformer_demo_models")
+HF_REPO = os.environ.get("HF_MODELS_REPO", "tong10035/transformer_demo_models")
 # ============================================
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))

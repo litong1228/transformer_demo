@@ -12,7 +12,7 @@ import os
 from huggingface_hub import HfApi, create_repo
 
 # ============ 改成你自己的 HF 仓库(用户名/仓库名)============
-HF_REPO = os.environ.get("HF_MODELS_REPO", "litong1228/transformer_demo_models")
+HF_REPO = os.environ.get("HF_MODELS_REPO", "tong10035/transformer_demo_models")
 PRIVATE = True  # 私有仓库;想公开改成 False
 # ===========================================================
 
